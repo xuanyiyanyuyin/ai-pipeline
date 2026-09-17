@@ -1,0 +1,55 @@
+=== Tue Sep 15 21:06:23 UTC 2026 RAM 主缓存版 bringup ===
+旧引擎已停
+启动 pid=4574
+就绪: 约 40 秒
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+[chunked_attention] 在线分块补丁应用成功，阈值=1024 tokens (query_chunk=256, kv_chunk=512)
+[chunked_attention] Q分块=256, KV分块=512, 触发阈值=1024 tokens
+[cfg] layers=43 layer_types=['sliding_attention', 'sliding_attention', 'compressed_sparse_attention', 'heavily_compressed_attention', 'compressed_sparse_attention', 'heavily_compressed_attention']...
+/workspace/engine/v4flash_chunked_sched.py:292: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /app/pytorch/torch/csrc/utils/tensor_new.cpp:1581.)
+  return torch.frombuffer(data, dtype=DTYPE_MAP[m['dtype']]).reshape(m['shape']).clone()
+[mem] embed+lm_head 常驻 GPU: 3.2GB
+[load] 预加载非专家层权重到 RAM ... 8s (1558 tensors)
+[load] 构建 43 层缓存 ...[ropefix] 汇总 模块=43 重算缓冲=124 修复前带NaN=0 修复后带NaN=0
+[resident] 层权重同步常驻 GPU (不走 copy_stream/offload) ...
+  [resident] 8/43 层就位, allocated=3.4GB (0s)
+  [resident] 16/43 层就位, allocated=4.6GB (0s)
+  [resident] 24/43 层就位, allocated=5.9GB (1s)
+  [resident] 32/43 层就位, allocated=7.1GB (1s)
+  [resident] 40/43 层就位, allocated=8.4GB (1s)
+[resident] 全部 43 层常驻完成, allocated=8.9GB
+ 7s
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+=== 预热 12 提示词 (Tue Sep 15 21:06:58 UTC 2026) ===
+[ 1/12] 107.6s | 写一个 Python 快排函数， |  （指尖的银光在键盘缝隙间游走，又停住）  “（抬眼看向提问者，目光里带着一丝玩味的审视的意味）”  “排序（sorti
+[ 2/12]  86.4s | 用五言绝句写一首秋天的诗 |  （（指尖轻叩桌面，目光微垂）秋（五（五言绝句）（ （缓声吟诵）  （（略作停顿（   （（最终定稿（： （（抬眸，声音
+[ 3/12]  78.7s | 解释什么是 MoE 混合专家模型 |  (MoE)架构(Multi-head Mixture-of-Experts)是核心机制(Mechanism)之一。  
+[ 4/12]  42.4s | 把这句话翻译成英文：今天天气很好 |  （The weather  is  nice  today  —  let  '  s  take  a  strol
+[ 5/12]  34.0s | 2048 加 1024 等于多少 | （2048+1024） =2000+1000+48+24   =3000+72   =3072
+[ 6/12]  90.4s | 写一段关于深海的描写，要画面感 |  （（微微（眯起眼睛（仿佛（在凝视那片虚空（ ）） （（低沉（而缓慢地（说道（ ） ））  "（（ ）） （（ ）） （
+[ 7/12]  23.7s | 介绍一下唐朝的历史，重点讲李世民 |  （唐太宗）
+[ 8/12]  88.9s | 用 SQL 写一个查询：找出每个 |  （靠在  椅背里，指尖轻轻敲击桌面）啊“分组（GROUP  BY）求最大值”，然后还得把“人（Employee  Na
+[ 9/12]  84.7s | 解释相对论和量子力学的区别 |  （指尖轻点桌面）这个问题很有意思。相对论和量子力学，本质上都是对“实在”的描述（微微前倾），但它们的视角完全不同（停顿
+[10/12]  75.5s | 写一个正则表达式，匹配中国的手机 |  ```  ^1[3-9]\d{9}$ ``` 这是目前最通用的标准写法，严格匹配中国大陆11位手机号（以13、14-1
+[11/12]  87.3s | 帮我给老板写一封请假邮件，理由是 |  （（听到 ）（ ）（ ）（ ））  （调整（坐姿）（ （笔直（ ）（ ）（ ）（ ）（ ）（ ）（ ）（ ）（ ）（ 
+[12/12]  79.7s | 讲讲分布式训练里数据并行和模型并 |  （轻轻将平板电脑放在桌面上沿逆时针旋转半圈，指尖在光滑的屏幕上显示出一个简笔示意图的轮廓轨迹）  "数据并行和模型并行
+总计 879.4s
+=== 显存 ===
+GPU[0]		: VRAM Total Memory (B): 51522830336
+GPU[0]		: VRAM Total Used Memory (B): 44464398336
+GPU[1]		: VRAM Total Memory (B): 51522830336
+GPU[1]		: VRAM Total Used Memory (B): 28418048
+GPU[2]		: VRAM Total Memory (B): 51522830336
+GPU[2]		: VRAM Total Used Memory (B): 28418048
+GPU[3]		: VRAM Total Memory (B): 51522830336
+GPU[3]		: VRAM Total Used Memory (B): 28418048
+=== RAM ===
+               total        used        free      shared  buff/cache   available
+Mem:             503         169          21           0         317         333
+=== 测速 (Tue Sep 15 21:21:38 UTC 2026) ===
+第1次(从1数到30)      TTFT=  19.3s  块数=  3  TPOT=0.691s/token  (1.45 tok/s)  文本4字  ' （一）'
+第2次(从1数到20)      TTFT=  18.9s  块数=  6  TPOT=0.712s/token  (1.40 tok/s)  文本7字  ' （一）（二）'
+=== 结束 Tue Sep 15 21:22:21 UTC 2026 ===
+ALL-DONE

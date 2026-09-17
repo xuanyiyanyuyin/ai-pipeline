@@ -1,0 +1,17 @@
+[fp8] CUDA kernel 不可用 ([Errno 2] No such file or directory: '/workspace/C:/Users/<user>/.cache/huggingface/hub) -> 回退纯 PyTorch 反量化
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+=== 串行预热 4 张卡 (编译内核) ===
+  cuda:0 预热 OK
+  cuda:1 预热 OK
+  cuda:2 预热 OK
+  cuda:3 预热 OK
+=== 并发 1→4 张卡 (每卡一个专家计算图) ===
+  1 卡: 每卡 0.199 ms/专家  墙钟 0.02s  →  聚合 4498 专家/秒  (相对单卡 944.65x)
+  2 卡: 每卡 0.287 ms/专家  墙钟 0.03s  →  聚合 6363 专家/秒  (相对单卡 1336.22x)
+  3 卡: 每卡 0.607 ms/专家  墙钟 0.06s  →  聚合 4679 专家/秒  (相对单卡 982.51x)
+  4 卡: 每卡 0.754 ms/专家  墙钟 0.08s  →  聚合 5094 专家/秒  (相对单卡 1069.83x)
+=== 激活路由往返开销 (8KB→卡, 4KB→GPU0) ===
+  GPU0 <-> cuda:1 发射+同步 中位 0.007 ms
+  GPU0 <-> cuda:2 发射+同步 中位 0.007 ms
+  GPU0 <-> cuda:3 发射+同步 中位 0.007 ms
+done

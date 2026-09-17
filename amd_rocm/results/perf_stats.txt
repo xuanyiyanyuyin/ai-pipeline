@@ -1,0 +1,20 @@
+  [1] 计数器已加
+  [2] get_expert 计数已加
+  [3] exp_stats 已加
+引擎补丁完成
+  [4] 服务端已暴露 exp 统计
+语法OK
+[resident] 层权重同步常驻 GPU (不走 copy_stream/offload) ...
+  [resident] 8/43 层就位, allocated=3.4GB (0s)
+  [resident] 16/43 层就位, allocated=4.6GB (0s)
+  [resident] 24/43 层就位, allocated=5.9GB (0s)
+=== 第 1 次请求: 读盘 76169 MB, 108s ===
+  exp统计: {"hot_hit": 2330, "store_hit": 966, "lru_hit": 0, "lru_miss": 7296, "hot_n": 1500, "store_n": 3400, "lru_n": 4000}
+=== 第 2 次请求: 读盘 72649 MB, 60s ===
+  exp统计: {"hot_hit": 4981, "store_hit": 2559, "lru_hit": 0, "lru_miss": 13634, "hot_n": 1500, "store_n": 3400, "lru_n": 4000}
+=== 两卡显存 / 内存 ===
+GPU[0]		: VRAM Total Used Memory (B): 30316179456
+GPU[1]		: VRAM Total Used Memory (B): 45769392128
+anon 61807480832
+file 55653986304
+DONE

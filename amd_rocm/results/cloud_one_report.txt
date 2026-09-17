@@ -1,0 +1,25 @@
+=== Tue Sep 15 23:05:01 UTC 2026 一站式开始 ===
+--- 1) 补丁状态 (live 文件里 _tm 出现次数) ---
+0
+ok init _tm
+ok moe 起表
+ok moe 计时
+ok status 暴露 tm
+备份 /workspace/engine/v4flash_chunked_sched.py.bak_tm_20260915_2305
+编译 OK
+打补丁后: 4 处, 备份:
+/workspace/engine/v4flash_chunked_sched.py.bak_tm_20260915_2305
+--- 2) 重启引擎 ---
+就绪 40s
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+[triton] 已后台提交内核预热
+--- 3) 预热专家 ---
+{"running": true, "done": 0, "total": 11008, "err": ""}
+预热完成 (45s)
+--- 4) 测速 + status 差值 ---
+第1次(从1数到30)      TTFT= 158.8s  块数= 28  TPOT=0.561s/token  (1.78 tok/s)  文本34字  ' "一、二、三、四、五、六、七、八、九、十、十一、十二、...三十"'
+第2次(从1数到20)      TTFT=  14.3s  块数= 44  TPOT=0.469s/token  (2.13 tok/s)  文本72字  ' （一、本、正经）十七、十八、十九、二十。（ （微微歪头）怎么样？这次我是不是该'
+BEFORE: {"ready": true, "active_requests": 1, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 2186, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 4.49}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+AFTER : {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 17525, "store_hit": 0, "lru_hit": 31693, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 81.891}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 结束 Tue Sep 15 23:11:38 UTC 2026 ===
+ALL-DONE

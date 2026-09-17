@@ -1,0 +1,19 @@
+=== Wed Sep 16 00:19:07 UTC 2026 修正偏移表 + 重测 ===
+[fix] 偏移表已修正
+[fix] 编译 OK
+--- 重启 ---
+就绪 40s
+--- 预热 ---
+submitted
+预热完成 (45s)
+BEFORE: {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+--- 测速 3 次 Wed Sep 16 00:21:55 UTC 2026 ---
+=== 可控基准: 3 次相同请求 (贪心, 64 token) ===
+  第1次: 墙钟   19.6s  主路径  4 + MTP  2 =   6 token  →  3.272 s/token, 0.31 tok/s
+  第2次: 墙钟   54.0s  主路径 60 + MTP 59 = 119 token  →  0.454 s/token, 2.20 tok/s
+  第3次: 墙钟   60.3s  主路径  0 + MTP  0 =   0 token  →  60.295 s/token, 0.00 tok/s
+status.exp.tm = {'moe': 73.487}
+AFTER : {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 44907, "store_hit": 0, "lru_hit": 31667, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 73.487}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+=== 结束 Wed Sep 16 00:24:29 UTC 2026 ===
+ALL-DONE

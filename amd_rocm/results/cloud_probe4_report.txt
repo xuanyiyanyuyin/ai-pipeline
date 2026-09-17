@@ -1,0 +1,32 @@
+=== Wed Sep 16 00:05:21 UTC 2026 云端四分段探针 ===
+引擎已停
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+[cld] 加载引擎...
+[chunked_attention] 在线分块补丁应用成功，阈值=1024 tokens (query_chunk=256, kv_chunk=512)
+[chunked_attention] Q分块=256, KV分块=512, 触发阈值=1024 tokens
+[cfg] layers=43 layer_types=['sliding_attention', 'sliding_attention', 'compressed_sparse_attention', 'heavily_compressed_attention', 'compressed_sparse_attention', 'heavily_compressed_attention']...
+/workspace/engine/v4flash_chunked_sched.py:492: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /app/pytorch/torch/csrc/utils/tensor_new.cpp:1581.)
+  return torch.frombuffer(data, dtype=DTYPE_MAP[m['dtype']]).reshape(m['shape']).clone()
+[mem] embed+lm_head 常驻 GPU: 3.2GB
+[load] 预加载非专家层权重到 RAM ... 9s (1558 tensors)
+[resident] 层权重同步常驻 GPU (不走 copy_stream/offload) ...
+[resident] 全部 43 层常驻完成, allocated=8.9GB
+ 8s
+[cld] 引擎加载完成 20s
+[cld] 预热 forward (触发预热+预填)...
+  group 0 done (1s)
+  group 1 done (2s)
+  group 2 done (2s)
+  group 3 done (2s)
+  group 4 done (3s)
+  group 5 done (3s)
+[cld] 首次 forward 2.9s
+  token1: 墙钟=1.506s | fwd=1.506s | attn=0.366s(24%) | moe=1.056s(70%) | 其中搬运=4.106s | other=0.084s(6%) | 专家查找=258 次
+  token2: 墙钟=1.366s | fwd=1.366s | attn=0.354s(26%) | moe=0.926s(68%) | 其中搬运=2.408s | other=0.086s(6%) | 专家查找=258 次
+  token3: 墙钟=1.412s | fwd=1.412s | attn=0.370s(26%) | moe=0.955s(68%) | 其中搬运=2.691s | other=0.086s(6%) | 专家查找=258 次
+  token4: 墙钟=1.325s | fwd=1.325s | attn=0.324s(24%) | moe=0.921s(70%) | 其中搬运=2.107s | other=0.080s(6%) | 专家查找=258 次
+[cld] DONE
+--- 重启服务 ---
+服务就绪 40s
+=== 结束 Wed Sep 16 00:06:35 UTC 2026 ===
+ALL-DONE

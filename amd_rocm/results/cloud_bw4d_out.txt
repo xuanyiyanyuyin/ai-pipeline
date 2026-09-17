@@ -1,0 +1,5 @@
+  F 8专家 x 6次阻塞拷贝 (现状)                          7.96 ms/层   13.43 GB/s
+  G 8专家 x 6次异步 + 1次sync                        7.97 ms/层   13.42 GB/s
+  H 打包 x 8专家异步 + 1次sync                        6.96 ms/层   15.36 GB/s
+  I 打包 x copy_stream + sync                    7.31 ms/层   14.63 GB/s
+done

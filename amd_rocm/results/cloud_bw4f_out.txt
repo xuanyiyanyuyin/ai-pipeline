@@ -1,0 +1,6 @@
+  a 12.75MB x400 排队/单来源                      15.23 GB/s   (4.98 GiB in 351.0 ms)
+  b 256MB x16 排队/单来源                         15.45 GB/s   (4.00 GiB in 278.0 ms)
+  c 12.75MB x3来源 排队                          15.14 GB/s   (14.94 GiB in 1059.7 ms)
+  d 102MB (8专家打包) x50                        15.74 GB/s   (4.98 GiB in 339.8 ms)
+  e 12.75MB 单块 + 每次sync                      15.45 GB/s   (2.49 GiB in 173.1 ms)
+done

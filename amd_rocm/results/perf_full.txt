@@ -1,0 +1,13 @@
+pid=27777
+=== 第 1 次: 读盘 67281 MB, 113s ===
+   exp: {"hot_hit": 2812, "store_hit": 837, "lru_hit": 370, "lru_miss": 6596, "hot_n": 2200, "store_n": 3600, "lru_n": 6596}
+=== 第 2 次: 读盘 2892 MB, 44s ===
+   exp: {"hot_hit": 6051, "store_hit": 2011, "lru_hit": 6319, "lru_miss": 6824, "hot_n": 2200, "store_n": 3600, "lru_n": 6824}
+=== 第 3 次: 读盘 2470 MB, 36s ===
+   exp: {"hot_hit": 9128, "store_hit": 3276, "lru_hit": 12399, "lru_miss": 7017, "hot_n": 2200, "store_n": 3600, "lru_n": 7000}
+=== 两卡显存 / 内存 ===
+GPU[0]		: VRAM Total Used Memory (B): 39773716480
+GPU[1]		: VRAM Total Used Memory (B): 48443412480
+anon 98537742336
+file 18823557120
+0

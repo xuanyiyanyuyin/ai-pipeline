@@ -1,0 +1,23 @@
+=== Tue Sep 15 23:21:23 UTC 2026 融合 epilogue 一站式 ===
+--- 1) 补丁 ---
+ok: 插入两个融合内核 + 包装函数
+ok: _forward_grouped 换成融合路径(带回落)
+ok: 加 _FUSE_EPI 开关
+ok: 预热循环改写
+ok: 预热加入新内核
+备份 /workspace/engine/v4flash_chunked_sched.py.bak_fuse_20260915_2321
+编译 OK
+2
+--- 2) 重启 (V4F_FUSE_EPI=1) ---
+就绪 40s
+--- 3) 等 Triton 4 个内核编译完 ---
+[triton] 已后台提交内核预热
+[triton] 预热失败: name '_mxfp4_gateup_kernel' is not defined
+--- 4) 预热专家 ---
+submitted
+预热完成 (45s)
+--- 5) 测速 (urllib, 不用 curl) Tue Sep 15 23:24:06 UTC 2026 ---
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>

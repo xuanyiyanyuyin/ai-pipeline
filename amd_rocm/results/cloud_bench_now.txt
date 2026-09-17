@@ -1,0 +1,7 @@
+=== Tue Sep 15 23:06:49 UTC 2026 测速 (计时补丁 + 分组MoE + 融合FP4) ===
+{"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+第1次(从1数到30)      TTFT=  38.1s  块数=  3  TPOT=0.271s/token  (3.69 tok/s)  文本4字  ' （一）'
+第2次(从1数到20)      TTFT= 127.0s  块数= 27  TPOT=0.362s/token  (2.76 tok/s)  文本51字  ' **一、**  \n**二、**  \n**三、**  \n**四、**  \n**五'
+AFTER: {"ready": true, "active_requests": 1, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 5288, "store_hit": 0, "lru_hit": 14968, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 38.576}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 结束 Tue Sep 15 23:10:24 UTC 2026 ===
+DONE

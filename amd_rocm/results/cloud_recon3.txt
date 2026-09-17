@@ -1,0 +1,43 @@
+=== 引擎启动行 (确认仓库已关) ===
+[load] 构建 43 层缓存 ...[ropefix] 汇总 模块=43 重算缓冲=124 修复前带NaN=0 修复后带NaN=0
+[resident] 层权重同步常驻 GPU (不走 copy_stream/offload) ...
+  [resident] 8/43 层就位, allocated=3.4GB (0s)
+  [resident] 16/43 层就位, allocated=4.6GB (0s)
+  [resident] 24/43 层就位, allocated=5.9GB (1s)
+  [resident] 32/43 层就位, allocated=7.1GB (1s)
+  [resident] 40/43 层就位, allocated=8.4GB (1s)
+[resident] 全部 43 层常驻完成, allocated=8.9GB
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+=== 预热进度 ===
+  [resident] 40/43 层就位, allocated=8.4GB (1s)
+[resident] 全部 43 层常驻完成, allocated=8.9GB
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+[ 1/12] 107.6s | 写一个 Python 快排函数， |  （指尖的银光在键盘缝隙间游走，又停住）  “（抬眼看向提问者，目光里带着一丝玩味的审视的意味）”  “排序（sorti
+[ 2/12]  86.4s | 用五言绝句写一首秋天的诗 |  （（指尖轻叩桌面，目光微垂）秋（五（五言绝句）（ （缓声吟诵）  （（略作停顿（   （（最终定稿（： （（抬眸，声音
+=== 模型目录 ===
+total 155887912
+drwxr-xr-x 6 root root       4096 Sep 15 20:21 .
+drwxr-xr-x 1 root root       4096 Sep 15 20:21 ..
+drwxr-xr-x 3 root root       4096 Sep 15 20:14 .cache
+-rw-r--r-- 1 root root       1603 Sep 15 20:14 .gitattributes
+-rw-r--r-- 1 root root       1084 Sep 15 20:14 LICENSE
+-rw-r--r-- 1 root root      13149 Sep 15 20:14 README.md
+drwxr-xr-x 2 root root       4096 Sep 15 20:14 assets
+=== 磁盘读速 (O_DIRECT, 4GB) ===
+file=/v4flash_fp4/model-00001-of-00046.safetensors
+252+1 records out
+1059061856 bytes (1.1 GB, 1010 MiB) copied, 0.202058 s, 5.2 GB/s
+=== 磁盘读速 (带缓存, 同一文件再读一次) ===
+252+1 records out
+1059061856 bytes (1.1 GB, 1010 MiB) copied, 0.107787 s, 9.8 GB/s
+=== server 路由 ===
+363:    def do_GET(self):
+364:        if self.path.startswith('/v1/models'):
+367:        elif self.path.startswith('/api/status'):
+375:        elif self.path.startswith('/api/thinking'):
+380:    def do_POST(self):
+381:        if self.path == '/api/thinking':
+392:        if self.path != '/v1/chat/completions':

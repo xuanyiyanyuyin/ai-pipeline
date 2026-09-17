@@ -1,0 +1,7 @@
+  GPU1->GPU0  12.75MB 排队                       15.13 GB/s  (200 x 12.8MB in 176.7 ms)
+  RAM(pinned)->GPU0 12.75MB 排队                 26.69 GB/s  (200 x 12.8MB in 100.2 ms)
+  RAM(普通)->GPU0 12.75MB 排队                     26.27 GB/s  (200 x 12.8MB in 101.8 ms)
+  GPU1->pinned->GPU0 12.75MB                   22.06 GB/s  (200 x 12.8MB in 121.2 ms)
+  GPU1->GPU0 256MB 每次sync                      23.93 GB/s  (8 x 256.0MB in 89.7 ms)
+  GPU1->GPU0 256MB 排队                          23.95 GB/s  (16 x 256.0MB in 179.4 ms)
+done

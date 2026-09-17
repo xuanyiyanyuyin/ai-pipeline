@@ -1,0 +1,23 @@
+=== Tue Sep 15 23:24:44 UTC 2026 纠正内核作用域 + 重测 ===
+已摘出融合内核块 4213 字节
+已插入 if _HAS_TRITON: 块内
+备份 /workspace/engine/v4flash_chunked_sched.py.bak_fix_20260915_2324
+编译 OK
+模块级函数含 gateup_kernel: False
+--- 重启 ---
+就绪 40s
+--- 等 Triton 内核 (4 个) ---
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 3s
+--- 预热专家 ---
+submitted
+预热完成
+--- 测速 Tue Sep 15 23:27:27 UTC 2026 ---
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+BEFORE: {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+cat: /tmp/f2.json: No such file or directory
+AFTER : 
+=== 结束 Tue Sep 15 23:30:57 UTC 2026 ===

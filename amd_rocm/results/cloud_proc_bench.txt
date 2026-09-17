@@ -1,0 +1,9 @@
+=== Tue Sep 15 23:57:08 UTC 2026 4 通道 = 独立进程 (spawn) ===
+--- 1 进程 ---
+  File "/workspace/proc_bench.py", line 20, in worker
+    import v4flash_chunked_sched as vs
+ModuleNotFoundError: No module named 'v4flash_chunked_sched'
+--- 2 进程 ---
+  File "/workspace/proc_bench.py", line 20, in worker
+    import v4flash_chunked_sched as vs
+ModuleNotFoundError: No module named 'v4flash_chunked_sched'

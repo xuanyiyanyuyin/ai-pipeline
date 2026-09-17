@@ -1,0 +1,5 @@
+=== 可控基准: 3 次相同请求 (贪心, 64 token) ===
+  第1次: 墙钟   60.4s  主路径 32 + MTP 29 =  61 token  →  0.991 s/token, 1.01 tok/s
+  第2次: 墙钟   20.6s  主路径  0 + MTP  0 =   0 token  →  20.637 s/token, 0.00 tok/s
+  第3次: 墙钟   55.7s  主路径  0 + MTP  0 =   0 token  →  55.747 s/token, 0.00 tok/s
+status.exp.tm = {'moe': 156.304}

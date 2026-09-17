@@ -1,0 +1,75 @@
+=== GPU link status (/sys) ===
+card1: speed=16.0 GT/s PCIe width=16 numa=0
+card2: speed=16.0 GT/s PCIe width=16 numa=0
+card3: speed=16.0 GT/s PCIe width=16 numa=0
+card4: speed=16.0 GT/s PCIe width=16 numa=0
+card5: speed=16.0 GT/s PCIe width=16 numa=1
+card6: speed=16.0 GT/s PCIe width=16 numa=1
+card7: speed=16.0 GT/s PCIe width=16 numa=1
+card8: speed=16.0 GT/s PCIe width=16 numa=1
+=== lspci gpu ===
+0000:03:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:23:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:43:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:63:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:65:00.0 VGA compatible controller [0300]: ASPEED Technology, Inc. ASPEED Graphics Family [1a03:2000] (rev 52)
+0000:83:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:a3:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:c3:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+0000:e3:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Device [1002:744b]
+=== LnkCap / LnkSta ===
+--- 0000:03:00.0
+--- 0000:23:00.0
+--- 0000:43:00.0
+--- 0000:63:00.0
+--- 0000:65:00.0
+--- 0000:83:00.0
+--- 0000:a3:00.0
+--- 0000:c3:00.0
+--- 0000:e3:00.0
+=== rocm-smi topo ===
+
+
+============================ ROCm System Management Interface ============================
+================================ Weight between two GPUs =================================
+       GPU0         GPU1         GPU2         GPU3         
+GPU0   0            40           40           40           
+GPU1   40           0            40           40           
+GPU2   40           40           0            40           
+GPU3   40           40           40           0            
+
+================================= Hops between two GPUs ==================================
+       GPU0         GPU1         GPU2         GPU3         
+GPU0   0            2            2            2            
+GPU1   2            0            2            2            
+GPU2   2            2            0            2            
+GPU3   2            2            2            0            
+
+=============================== Link Type between two GPUs ===============================
+       GPU0         GPU1         GPU2         GPU3         
+GPU0   0            PCIE         PCIE         PCIE         
+GPU1   PCIE         0            PCIE         PCIE         
+GPU2   PCIE         PCIE         0            PCIE         
+GPU3   PCIE         PCIE         PCIE         0            
+
+======================================= Numa Nodes =======================================
+GPU[0]		: (Topology) Numa Node: 1
+GPU[0]		: (Topology) Numa Affinity: 1
+GPU[1]		: (Topology) Numa Node: 1
+GPU[1]		: (Topology) Numa Affinity: 1
+GPU[2]		: (Topology) Numa Node: 1
+GPU[2]		: (Topology) Numa Affinity: 1
+GPU[3]		: (Topology) Numa Node: 1
+GPU[3]		: (Topology) Numa Affinity: 1
+================================== End of ROCm SMI Log ===================================
+=== numa ===
+Core(s) per socket:                   32
+Socket(s):                            2
+NUMA node(s):                         2
+NUMA node0 CPU(s):                    0-31,64-95
+NUMA node1 CPU(s):                    32-63,96-127
+=== cpu/mem ===
+128
+               total        used        free      shared  buff/cache   available
+Mem:             503          59          39           0         408         444
+Swap:              0           0           0

@@ -1,0 +1,55 @@
+torch 2.9.1+gitff65f5b hip 7.2.53211-e1a6bc5663
+gpu0 AMD Radeon Graphics 48.0GB
+gpu1 AMD Radeon Graphics 48.0GB
+gpu2 AMD Radeon Graphics 48.0GB
+gpu3 AMD Radeon Graphics 48.0GB
+--- peer access matrix ---
+0 [False, True, True, True]
+1 [True, False, True, True]
+2 [True, True, False, True]
+3 [True, True, True, False]
+--- size 12.75MB iters=80 ---
+  cuda0 -> cuda1:  15.15 GB/s
+  cuda0 -> cuda2:  15.15 GB/s
+  cuda0 -> cuda3:  15.15 GB/s
+  cuda1 -> cuda0:  15.16 GB/s
+  cuda1 -> cuda2: 800.55 GB/s
+  cuda1 -> cuda3: 270.55 GB/s
+  cuda2 -> cuda0:  15.13 GB/s
+  cuda2 -> cuda1: 616.57 GB/s
+  cuda2 -> cuda3: 283.56 GB/s
+  cuda3 -> cuda0:  14.26 GB/s
+  cuda3 -> cuda1: 684.20 GB/s
+  cuda3 -> cuda2: 254.35 GB/s
+--- size 64MB iters=32 ---
+  cuda0 -> cuda1:  18.25 GB/s
+  cuda0 -> cuda2:  15.45 GB/s
+  cuda0 -> cuda3:  15.45 GB/s
+  cuda1 -> cuda0:  15.45 GB/s
+  cuda1 -> cuda2: 3885.54 GB/s
+  cuda1 -> cuda3: 3733.29 GB/s
+  cuda2 -> cuda0:  15.44 GB/s
+  cuda2 -> cuda1: 3805.05 GB/s
+  cuda2 -> cuda3: 3226.65 GB/s
+  cuda3 -> cuda0:  15.44 GB/s
+  cuda3 -> cuda1: 4615.40 GB/s
+  cuda3 -> cuda2: 4734.56 GB/s
+--- size 256MB iters=8 ---
+  cuda0 -> cuda1:  28.02 GB/s
+  cuda0 -> cuda2:  23.94 GB/s
+  cuda0 -> cuda3:  23.94 GB/s
+  cuda1 -> cuda0:  23.94 GB/s
+  cuda1 -> cuda2: 16439.54 GB/s
+  cuda1 -> cuda3: 17885.29 GB/s
+  cuda2 -> cuda0:  23.91 GB/s
+  cuda2 -> cuda1: 15196.01 GB/s
+  cuda2 -> cuda3: 18214.47 GB/s
+  cuda3 -> cuda0:  21.14 GB/s
+  cuda3 -> cuda1: 9552.51 GB/s
+  cuda3 -> cuda2: 11883.64 GB/s
+--- h2d / d2h pinned 256MB ---
+  cuda0: H2D  27.08 GB/s   D2H  28.17 GB/s
+  cuda1: H2D 56172.94 GB/s   D2H 60390.84 GB/s
+  cuda2: H2D 64508.13 GB/s   D2H 67028.37 GB/s
+  cuda3: H2D 58010.09 GB/s   D2H 60356.06 GB/s
+done

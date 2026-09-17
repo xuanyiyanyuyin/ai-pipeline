@@ -1,0 +1,7 @@
+=== Tue Sep 15 22:21:33 UTC 2026 MoE 细探针 bringup ===
+旧引擎已停
+就绪: 约 50 秒
+=== 预热 ===
+{"running": true, "done": 0, "total": 11008, "err": ""}
+预热完成
+=== 第0次请求 (含 Triton 首编译, 只用于跑热) Tue Sep 15 22:25:19 UTC 2026 ===

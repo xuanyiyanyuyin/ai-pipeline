@@ -1,0 +1,37 @@
+=== Wed Sep 16 00:12:38 UTC 2026 打包专家一次性拷贝 一轮 ===
+--- 0) 等重排完成 ---
+重排完成
+[pack] 43/43 层, 137.1 GB 已写, 185s (760 MB/s)
+[pack] 完成 184.8s
+-rw-r--r-- 1 root root 147169738752 Sep 16 00:14 /v4flash_expack/experts.bin
+--- 1) 打补丁 ---
+ok: 插入 expack 助手
+ok ExpertLRU.get 走打包
+ok get_expert 一次拷贝
+备份 /workspace/engine/v4flash_chunked_sched.py.bak_expack_20260916_0014
+编译 OK
+--- 2) memlock 上限 (决定能否 pinned) ---
+8192
+PIN_LRU=0
+--- 3) 更新启动脚本 env ---
+17:export V4F_MTP=1
+18:export V4F_BUILD_WORKERS=6
+19:export V4F_D2H_WORKERS=4
+20:export V4F_EXPACK=/v4flash_expack/experts.bin
+21:export V4F_PIN_LRU=0
+22:export V4F_EXP_WORKERS=3
+--- 4) 重启 ---
+就绪 50s
+--- 5) 预热专家 ---
+submitted
+预热完成 (30s)
+BEFORE: {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 0, "hot_n": 0, "store_n": 0, "lru_n": 0, "tm": {}}, "gpu_experts": 0, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+--- 6) 测速 (3 次可控基准) Wed Sep 16 00:17:21 UTC 2026 ---
+=== 可控基准: 3 次相同请求 (贪心, 64 token) ===
+  第1次: 墙钟    2.5s  主路径  0 + MTP  0 =   0 token  →  2.507 s/token, 0.00 tok/s
+  第2次: 墙钟    1.4s  主路径  0 + MTP  0 =   0 token  →  1.358 s/token, 0.00 tok/s
+  第3次: 墙钟    0.2s  主路径  0 + MTP  0 =   0 token  →  0.184 s/token, 0.00 tok/s
+status.exp.tm = {}
+AFTER : {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 0, "hot_n": 0, "store_n": 0, "lru_n": 0, "tm": {}}, "gpu_experts": 0, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 结束 Wed Sep 16 00:17:45 UTC 2026 ===
+ALL-DONE

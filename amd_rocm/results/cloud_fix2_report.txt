@@ -1,0 +1,19 @@
+=== Tue Sep 15 23:30:45 UTC 2026 修 BLOCK_M + 重测 ===
+内核 offs_m 改为 pid_m 网格: 2 处
+包装: 网格 2 处, BLOCK_M=8→1 2 处
+融合条件 M<=8→4: 1 处
+预热形状 8→4
+备份 /workspace/engine/v4flash_chunked_sched.py.bak_fix2_20260915_2330
+编译 OK
+就绪 40s
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 1s
+prewarm submitted
+预热完成
+--- 测速 Tue Sep 15 23:33:28 UTC 2026 ---
+第1次(从1数到30)      TTFT=  93.3s  块数= 61  TPOT=1.057s/token  (0.95 tok/s)  文本96字  ' \n\n一、二、三、四、五、六、七、八、九、十、\n\n十一、十二、十三、十四、十五、'
+第2次(从1数到20)      TTFT=  18.9s  块数=  6  TPOT=0.911s/token  (1.10 tok/s)  文本7字  ' （一）（二）'
+BEFORE: {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+AFTER : {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 12883, "store_hit": 0, "lru_hit": 15926, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 75.516}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 结束 Tue Sep 15 23:37:09 UTC 2026 ===
+ALL-DONE

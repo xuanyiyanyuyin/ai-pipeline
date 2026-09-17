@@ -1,0 +1,87 @@
+=== 进程/内存 ===
+    PID %CPU %MEM   RSS     ELAPSED CMD
+   4574  474 22.9 121293572   04:32 /opt/venv/bin/python -u v4flash_chunked_server.py
+     64  0.2  0.0 34816    01:09:57 /opt/venv/bin/python /opt/venv/bin/platform-agent-agent --socket /run/platform-agent/agent.sock --spool /var/lib/platform-agent/spool.sqlite --collector-url https://platform-agent-collector.platform-internal.svc:8443/internal/v1/surveillance/events --credential-file /run/secrets/platform-agent/credential --workspace /workspace --process-interval-seconds 5 --status-interval-seconds 300 --health-port 8787
+     75  0.0  0.0 105472   01:09:54 /opt/venv/bin/python3.12 /opt/venv/bin/jupyter-lab --config=/etc/jupyter/jupyter_server_config.py
+   4851  0.0  0.0 20480       04:02 /opt/venv/bin/python /workspace/warmfill.py
+    556  0.0  0.0  4096    01:09:31 sshd: /usr/sbin/sshd -f /tmp/amd-oneclick-sshd_config [listener] 0 of 10-100 startups
+               total        used        free      shared  buff/cache   available
+Mem:             503         151           4           0         352         352
+Swap:              0           0           0
+=== 日志尾 40 ===
+  [gen] token 44 done (MTP+37)
+[mtp] MTP 加速统计: 额外产出 41 token
+[server] 请求入队, 当前排队+生成=1
+[server] 获得生成锁 (等待 0s), 开始生成
+[chat] prompt 211 tokens: [历史相关记忆] 历史(1.0): 用五言绝句写一首秋天的诗 →  （（指尖轻叩
+  group 0 done (3s)
+  group 1 done (7s)
+  group 2 done (14s)
+  group 3 done (24s)
+  group 4 done (31s)
+  group 5 done (34s)
+  [gen] token 4 done (MTP+2)
+  [gen] token 8 done (MTP+5)
+  [gen] token 12 done (MTP+9)
+  [gen] token 16 done (MTP+13)
+  [gen] token 16 done (MTP+13)
+  [gen] token 20 done (MTP+16)
+  [gen] token 20 done (MTP+16)
+  [gen] token 24 done (MTP+19)
+  [gen] token 24 done (MTP+19)
+  [gen] token 28 done (MTP+21)
+  [gen] token 32 done (MTP+25)
+[mtp] MTP 加速统计: 额外产出 27 token
+[server] 请求入队, 当前排队+生成=1
+[server] 获得生成锁 (等待 0s), 开始生成
+[chat] prompt 181 tokens: [历史相关记忆] 历史(1.0): 解释什么是 MoE 混合专家模型，200字 
+  group 0 done (4s)
+  group 1 done (7s)
+  group 2 done (10s)
+  group 3 done (12s)
+  group 4 done (15s)
+  group 5 done (16s)
+  [gen] token 4 done (MTP+2)
+  [gen] token 4 done (MTP+2)
+  [gen] token 8 done (MTP+4)
+  [gen] token 12 done (MTP+8)
+  [gen] token 16 done (MTP+12)
+  [gen] token 20 done (MTP+16)
+  [gen] token 20 done (MTP+16)
+  [gen] token 24 done (MTP+19)
+=== token 计时统计 ===
+  [gen] token 24 done (MTP+19)
+  [gen] token 24 done (MTP+19)
+  [gen] token 28 done (MTP+21)
+  [gen] token 32 done (MTP+25)
+  [gen] token 4 done (MTP+2)
+  [gen] token 4 done (MTP+2)
+  [gen] token 8 done (MTP+4)
+  [gen] token 12 done (MTP+8)
+  [gen] token 16 done (MTP+12)
+  [gen] token 20 done (MTP+16)
+  [gen] token 20 done (MTP+16)
+  [gen] token 24 done (MTP+19)
+=== group 计时 ===
+  group 4 done (31s)
+  group 5 done (34s)
+  group 0 done (4s)
+  group 1 done (7s)
+  group 2 done (10s)
+  group 3 done (12s)
+  group 4 done (15s)
+  group 5 done (16s)
+=== 预热进度 ===
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+[ 1/12] 107.6s | 写一个 Python 快排函数， |  （指尖的银光在键盘缝隙间游走，又停住）  “（抬眼看向提问者，目光里带着一丝玩味的审视的意味）”  “排序（sorti
+[ 2/12]  86.4s | 用五言绝句写一首秋天的诗 |  （（指尖轻叩桌面，目光微垂）秋（五（五言绝句）（ （缓声吟诵）  （（略作停顿（   （（最终定稿（： （（抬眸，声音
+=== LRU/命中统计相关代码 ===
+518:        self.hits = [0]
+519:        self.miss = [0]
+527:                self.hits[0] += 1
+531:            self.miss[0] += 1
+841:        self._exp_stat = {'hot': 0, 'store': 0}
+899:                'hot_hit': self._exp_stat['hot'], 'store_hit': self._exp_stat['store'],
+946:                self._exp_stat['hot'] += 1
+952:            self._exp_stat['store'] += 1

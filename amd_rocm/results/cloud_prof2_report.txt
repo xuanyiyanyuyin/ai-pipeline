@@ -1,0 +1,19 @@
+=== Tue Sep 15 21:29:04 UTC 2026 重启 (计时探针 + prewarm 接口) ===
+旧引擎已停
+就绪: 约 40 秒
+  [resident] 40/43 层就位, allocated=8.4GB (1s)
+[resident] 全部 43 层常驻完成, allocated=8.9GB
+ 8s
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+=== 预热 (prewarm, 全量专家 → RAM LRU) Tue Sep 15 21:29:39 UTC 2026 ===
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 3456, "total": 11008, "err": ""}
+{"running": true, "done": 7904, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}
+{"running": true, "done": 0, "total": 11008, "err": ""}

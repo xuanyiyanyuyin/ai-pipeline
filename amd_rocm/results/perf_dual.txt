@@ -1,0 +1,22 @@
+=== 清理旧进程 ===
+Traceback (most recent call last):
+  File "/workspace/dual_ctx_patch.py", line 19, in <module>
+    assert A in s, '锚点未找到'
+           ^^^^^^
+AssertionError: 锚点未找到
+语法OK
+[load] 构建 43 层缓存 ...[ropefix] 汇总 模块=43 重算缓冲=124 修复前带NaN=0 修复后带NaN=0
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+=== 单请求验证 (16 token 流式) ===
+未收到 token 块
+=== 两卡显存 ===
+GPU[0]		: VRAM Total Used Memory (B): 7406321664
+GPU[1]		: VRAM Total Used Memory (B): 28327936
+=== warn ===
+0
+=== 日志尾 ===
+ 6s
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+[server] 请求入队, 当前排队+生成=1
+[server] 获得生成锁 (等待 0s), 开始生成
+DONE

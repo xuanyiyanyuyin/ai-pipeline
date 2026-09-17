@@ -1,0 +1,24 @@
+=== Tue Sep 15 23:38:15 UTC 2026 关掉 V4F_FUSE_EPI, 回到上一版最好配置 ===
+4:export V4F_BASE=/workspace
+5:export V4F_MODEL_DIR=/v4flash_fp4
+6:export V4F_SRC_DIR=/workspace/engine/_v4flash_src
+7:export V4F_TORCH_FP8=1
+8:export V4F_TRITON_FP4=1               # ★ 融合 MXFP4 内核 (启动后台预热)
+9:export V4F_FUSE_EPI=0              # 融合epilogue实测更慢(75.5s vs 38.6s moe), 关闭
+10:export V4F_GROUPED_MOE=1              # ★ 分组 MoE 前向
+11:export V4F_RESIDENT_LAYERS=1
+12:export V4F_GPU_EXP_MAX=2500
+13:export V4F_EXP_STORE_DEV=
+14:export V4F_EXP_STORE_MAX=0
+15:export V4F_LRU_ITEMS=13000
+就绪 40s
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 1s
+prewarm submitted
+预热完成
+--- 测速 Tue Sep 15 23:40:53 UTC 2026 ---
+第1次(从1数到30)      TTFT=  62.7s  块数= 62  TPOT=0.702s/token  (1.43 tok/s)  文本97字  ' "一、二、三、四、五、六、七、八、九、十、十一、十二、十三、十四、十五、十六、'
+第2次(从1数到20)      TTFT=  24.4s  块数= 18  TPOT=0.632s/token  (1.58 tok/s)  文本33字  ' **一、**  \n（二）  \n**三**  \n四  \n**五**'
+AFTER: {"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 14377, "store_hit": 0, "lru_hit": 16827, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"moe": 71.697}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 结束 Tue Sep 15 23:43:34 UTC 2026 ===
+ALL-DONE

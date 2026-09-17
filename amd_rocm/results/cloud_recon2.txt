@@ -1,0 +1,130 @@
+=== ls /workspace ===
+total 1612
+drwxrwsr-x 4 nobody nogroup    4096 Sep 15 21:05 .
+drwxr-xr-x 1 root   root       4096 Sep 15 20:21 ..
+-rwxrwxr-x 1 nobody nogroup    2048 Sep 12 21:28 ab_test.sh
+-rw-r--r-- 1 nobody nogroup     858 Sep 15 20:57 bench_final.txt
+-rw-r--r-- 1 nobody nogroup    2163 Sep 15 21:02 bw4.py
+-rw-r--r-- 1 nobody nogroup    1716 Sep 15 21:02 bw4_out.txt
+-rw-r--r-- 1 nobody nogroup    2274 Sep 15 21:03 bw4b.py
+-rw-r--r-- 1 nobody nogroup    2758 Sep 15 21:03 bw4b_out.txt
+-rw-r--r-- 1 nobody nogroup    2985 Sep 15 21:03 bw4c.py
+-rw-r--r-- 1 nobody nogroup     387 Sep 15 21:04 bw4c_out.txt
+-rw-r--r-- 1 nobody nogroup    2471 Sep 15 21:04 bw4d.py
+-rw-r--r-- 1 nobody nogroup     341 Sep 15 21:04 bw4d_out.txt
+-rw-r--r-- 1 nobody nogroup    3526 Sep 15 21:04 bw4e.py
+-rw-r--r-- 1 nobody nogroup     461 Sep 15 21:04 bw4e_out.txt
+-rw-r--r-- 1 nobody nogroup    2087 Sep 15 21:05 bw4f.py
+-rw-r--r-- 1 nobody nogroup     456 Sep 15 21:05 bw4f_out.txt
+-rw-r--r-- 1 nobody nogroup    1936 Sep 15 21:05 bw4g.py
+-rw-r--r-- 1 nobody nogroup     543 Sep 15 21:05 bw4g_out.txt
+-rw-rw-r-- 1 nobody nogroup    2818 Sep 12 21:46 cfg_check.py
+-rwxrwxr-x 1 nobody nogroup    1256 Sep 12 23:02 disk_measure.sh
+-rwxrwxr-x 1 nobody nogroup     954 Sep 12 23:03 dm2.sh
+-rw-rw-r-- 1 nobody nogroup    1050 Sep 12 22:42 dual_ctx_patch.py
+-rw-rw-r-- 1 nobody nogroup    7122 Sep 12 22:29 dual_gpu_patch.py
+-rw-rw-r-- 1 nobody nogroup    3116 Sep 12 22:29 dual_gpu_patch2.py
+-rwxrwxr-x 1 nobody nogroup    2209 Sep 12 22:42 dual_run2.sh
+-rwxrwxr-x 1 nobody nogroup    1215 Sep 12 22:29 dual_test.sh
+drwxrwsr-x 4 nobody nogroup     218 Sep 12 20:42 engine
+-rw-rw-r-- 1 nobody nogroup    5854 Sep 12 22:47 final_patch.py
+-rwxrwxr-x 1 nobody nogroup    1917 Sep 12 22:47 final_run.sh
+-rwxrwxr-x 1 nobody nogroup     952 Sep 12 22:14 fix_mem.sh
+-rwxrwxr-x 1 nobody nogroup    1874 Sep 12 23:11 full_run.sh
+-rwxrwxr-x 1 nobody nogroup    1470 Sep 12 22:23 gpu_info.sh
+-rw-rw-r-- 1 nobody nogroup     414 Sep 12 22:17 last_out.txt
+-rw-r--r-- 1 nobody nogroup    3755 Sep 15 21:02 link4.txt
+drwxrwsr-x 3 nobody nogroup      46 Sep 12 20:57 llamacpp
+-rw-rw-r-- 1 nobody nogroup      15 Sep 12 23:32 msg.txt
+-rwxrwxr-x 1 nobody nogroup    1255 Sep 12 23:19 mtp_run.sh
+-rwxrwxr-x 1 nobody nogroup    1727 Sep 12 23:29 mtp_speed.sh
+-rwxrwxr-x 1 nobody nogroup    1776 Sep 12 23:30 mtp_speed2.sh
+=== start_4card.sh ===
+#!/bin/bash
+# ═══ 4 卡启动脚本 (206GB 显存 → 全量专家常驻显存, 不再需要大 LRU) ═══
+# 分卡布局:
+#   GPU0: 43层常驻 13GB + embed/lm_head 3.2GB + 热池 2500 个(32GB) ≈ 48GB / 51.5GB
+#   GPU1-3: 专家仓库 每卡 3670 个(46.8GB)  → 3×3670 = 11010 ≥ 全量 11008 ✓
+#   RAM: LRU 只留 1500 作暂存 (专家都在显存里)
+# 计算永远在 GPU0; 仓库卡命中时把一个专家(12.75MB)拉回来 ≈0.65ms (P2P 实测 ~20GB/s)
+cd /workspace/engine
+export V4F_BASE=/workspace
+export V4F_MODEL_DIR=/v4flash_fp4
+export V4F_SRC_DIR=/workspace/engine/_v4flash_src
+export V4F_TORCH_FP8=1
+export V4F_RESIDENT_LAYERS=1          # 43 层常驻 GPU0, 不再每 token 搬 13GB
+export V4F_GPU_EXP_MAX=2500           # GPU0 热池 (命中免搬运)
+export V4F_EXP_STORE_DEV=1,2,3        # 三张显存仓库卡 (多仓库扩展已内置)
+export V4F_EXP_STORE_MAX=3670         # 每卡上限; 3 张正好放下全量 11008 个专家
+export V4F_LRU_ITEMS=1500             # 显存已全覆盖, RAM LRU 只作暂存
+export V4F_KEEP_GPU_CACHE=1
+export V4F_MTP=1                      # 多 token 预测 (≈1.4-2x)
+export V4F_EXP_WORKERS=6
+export V4F_BUILD_WORKERS=6
+export V4F_D2H_WORKERS=4
+exec /opt/venv/bin/python v4flash_chunked_server.py
+=== warmfill.py 头部 ===
+import json, time, urllib.request
+
+URL = "http://127.0.0.1:8123/v1/chat/completions"
+
+PROMPTS = [
+    "写一个 Python 快排函数，带注释",
+    "用五言绝句写一首秋天的诗",
+    "解释什么是 MoE 混合专家模型，200字",
+    "把这句话翻译成英文：今天天气很好，我们去公园散步吧",
+    "2048 加 1024 等于多少？给出计算过程",
+    "写一段关于深海的描写，要画面感",
+    "介绍一下唐朝的历史，重点讲李世民",
+    "用 SQL 写一个查询：找出每个部门工资最高的员工",
+    "解释相对论和量子力学的区别",
+    "写一个正则表达式，匹配中国的手机号",
+    "帮我给老板写一封请假邮件，理由是要去医院复查",
+    "讲讲分布式训练里数据并行和模型并行的区别",
+]
+
+def ask(msg, mt=48):
+    body = json.dumps({"model": "v4flash", "messages": [{"role": "user", "content": msg}],
+                       "stream": False, "max_tokens": mt}).encode("utf-8")
+    req = urllib.request.Request(URL, data=body, headers={"Content-Type": "application/json"})
+    t0 = time.time()
+    try:
+        d = json.loads(urllib.request.urlopen(req, timeout=1800).read().decode("utf-8", "replace"))
+        c = (d.get("choices") or [{}])[0].get("message", {}).get("content", "")
+        return time.time() - t0, c
+    except Exception as e:
+        return time.time() - t0, "ERR " + str(e)[:80]
+
+if __name__ == "__main__":
+    t_all = time.time()
+    for i, p in enumerate(PROMPTS, 1):
+        dt, c = ask(p)
+        print("[%2d/%d] %5.1fs | %s | %s" % (i, len(PROMPTS), dt, p[:16], c.replace("\n", " ")[:60]), flush=True)
+    print("总计 %.1fs" % (time.time() - t_all))
+=== 当前进程 ===
+10001         64       0  0 20:01 ?        00:00:11 /opt/venv/bin/python /opt/venv/bin/platform-agent-agent --socket /run/platform-agent/agent.sock --spool /var/lib/platform-agent/spool.sqlite --collector-url https://platform-agent-collector.platform-internal.svc:8443/internal/v1/surveillance/events --credential-file /run/secrets/platform-agent/credential --workspace /workspace --process-interval-seconds 5 --status-interval-seconds 300 --health-port 8787
+root          75       0  0 20:01 ?        00:00:01 /opt/venv/bin/python3.12 /opt/venv/bin/jupyter-lab --config=/etc/jupyter/jupyter_server_config.py
+root        2213       1 99 20:24 ?        00:44:16 /opt/venv/bin/python v4flash_chunked_server.py
+=== 显存 ===
+GPU[0]		: VRAM Total Memory (B): 51522830336
+GPU[0]		: VRAM Total Used Memory (B): 44550639616
+GPU[1]		: VRAM Total Memory (B): 51522830336
+GPU[1]		: VRAM Total Used Memory (B): 47128731648
+GPU[2]		: VRAM Total Memory (B): 51522830336
+GPU[2]		: VRAM Total Used Memory (B): 47239872512
+GPU[3]		: VRAM Total Memory (B): 51522830336
+GPU[3]		: VRAM Total Used Memory (B): 47286009856
+=== bench_final.txt ===
+时间: Tue Sep 15 20:55:56 UTC 2026
+--- 显存 ---
+GPU[0]		: VRAM Total Memory (B): 51522830336
+GPU[0]		: VRAM Total Used Memory (B): 44550639616
+GPU[1]		: VRAM Total Memory (B): 51522830336
+GPU[1]		: VRAM Total Used Memory (B): 47107760128
+GPU[2]		: VRAM Total Memory (B): 51522830336
+GPU[2]		: VRAM Total Used Memory (B): 47239872512
+GPU[3]		: VRAM Total Memory (B): 51522830336
+GPU[3]		: VRAM Total Used Memory (B): 47286009856
+--- 测速 ---
+第1次(从1数到30)      TTFT=  16.5s  块数= 28  TPOT=0.632s/token  (1.58 tok/s)  文本34字  ' "一、二、三、四、五、六、七、八、九、十、十一、十二、...三十"'
+第2次(从1数到20)      TTFT=  16.3s  块数= 41  TPOT=0.653s/token  (1.53 tok/s)  文本52字  ' \n一、二、三、四、五、六、七、八、九、十、十一、十二、十三、十四、十五、十六、'

@@ -1,0 +1,6 @@
+  A 6x blocking (现状)                   0.967 ms/专家   13.82 GB/s
+  B 1x blocking (打包)                   0.867 ms/专家   15.42 GB/s
+  C 1x async + sync                    0.974 ms/专家   13.72 GB/s
+  D 2线程 x 6x blocking                  0.151 ms/专家   88.65 GB/s (聚合)
+  E 2线程 x 整块异步                         0.960 ms/专家   13.93 GB/s (聚合)
+done

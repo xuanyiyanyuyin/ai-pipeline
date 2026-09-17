@@ -1,0 +1,7 @@
+  w1.weight                          I8 [2048, 2048]
+  w1.scale                           F8_E8M0 [2048, 128]
+  w2.weight                          I8 [4096, 1024]
+  w2.scale                           F8_E8M0 [4096, 64]
+w1 torch.Size([2048, 2048]) torch.int8 | scale torch.Size([2048, 128]) torch.float8_e8m0fnu | N=2048 K=4096
+M=1: 现状 0.424 ms | triton 0.063 ms (BM1 BN32 BK256 w8) | 加速 6.7x | 相对误差 0.00e+00
+     每token(1032次): 现状 0.44 s → triton 0.065 s

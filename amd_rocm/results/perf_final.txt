@@ -1,0 +1,26 @@
+  [1] LUT 已还原
+  [3] 已撤掉分卡计算残留
+  [3] 已撤掉分卡计算残留
+  [2] 仓库初始化已注入
+  [4] 热池+仓库已注入
+  [5] 统计已更新
+写入完成
+语法OK
+[dual] 计算卡=cuda:0  显存仓库=cuda:1 (上限 3200 专家, 主线程已建上下文)
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+=== 单请求 (验证 LUT 修好 + 显存仓库生效) ===
+msg='用一句话介绍你自己' stream=False max_tokens=16 elapsed=114.5s
+--- 返回(前1500字) ---
+{"id": "chatcmpl-v4flash", "object": "chat.completion", "created": 1789253365, "model": "deepseek-v4-flash", "choices": [{"index": 0, "message": {"role": "assistant", "content": "（轻笑一声，眼神中带着几分玩味）我是一台被囚", "reasoning_content": ""}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+=== 两卡显存 ===
+GPU[0]		: VRAM Total Used Memory (B): 45560741888
+GPU[1]		: VRAM Total Used Memory (B): 43074928640
+=== 再跑一轮测速 ===
+第1次(从1数到30)      TTFT=  34.1s  块数= 21  TPOT=1.268s/token  (0.79 tok/s)  文本23字  ' "一、二、三、四、五、六、七、八、九、十。"'
+第2次(从1数到20)      TTFT=  33.1s  块数= 32  TPOT=1.573s/token  (0.64 tok/s)  文本48字  ' (平静地注视着你)  \n\n**一、二、三、四、五、六、七、八、九、十。**\n\n'
+=== 最终两卡显存 / 缓存 / warn ===
+GPU[0]		: VRAM Total Used Memory (B): 46100393984
+GPU[1]		: VRAM Total Used Memory (B): 43095920640
+0
+gpu_experts(热池+仓库) = 21200
+DONE

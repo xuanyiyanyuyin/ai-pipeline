@@ -1,0 +1,24 @@
+=== Tue Sep 15 22:49:21 UTC 2026 分组MoE+融合FP4 bringup ===
+旧引擎已停
+就绪: 约 50 秒
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 1s
+=== 预热专家 (prewarm) Tue Sep 15 22:50:09 UTC 2026 ===
+{"running": true, "done": 0, "total": 11008, "err": ""}
+专家预热完成 (45s)
+=== 等 Triton 内核就绪 ===
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 1s
+=== 小请求跑热 (含首次分组路径) Tue Sep 15 22:51:59 UTC 2026 ===
+小请求用时 104 秒, 返回 0 字节
+
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+[triton] 已后台提交内核预热
+[triton] 内核预热完成 1s
+=== 测速 Tue Sep 15 22:53:43 UTC 2026 ===
+第1次(从1数到30)      TTFT=  73.6s  块数= 28  TPOT=0.467s/token  (2.14 tok/s)  文本34字  ' "一、二、三、四、五、六、七、八、九、十、十一、十二、...三十"'
+第2次(从1数到20)      TTFT=  59.0s  块数= 62  TPOT=0.371s/token  (2.70 tok/s)  文本80字  ' （一、本、正、经）一、二、三、四、五、六、七、八、九、十、十一（语气稍缓）、十'
+测速墙钟 168 秒
+=== 结束 Tue Sep 15 22:56:31 UTC 2026 ===
+ALL-DONE

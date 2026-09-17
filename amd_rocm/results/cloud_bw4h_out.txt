@@ -1,0 +1,11 @@
+=== 模拟引擎写法: 6 个张量 .to(GPU, non_blocking=True) ===
+  pageable  1线程                                      1.14 ms/专家    11.68 GB/s 聚合
+  pageable  6线程                                      0.62 ms/专家    21.73 GB/s 聚合
+  pinned    1线程                                      0.55 ms/专家    24.16 GB/s 聚合
+  pinned    6线程                                      0.56 ms/专家    23.85 GB/s 聚合
+=== 打包成整块 12.75MB 一次拷 ===
+  整块 pageable 1线程                                    0.54 ms/专家    24.92 GB/s 聚合
+  整块 pageable 6线程                                    0.51 ms/专家    26.04 GB/s 聚合
+  整块 pinned   1线程                                    0.50 ms/专家    26.57 GB/s 聚合
+  整块 pinned   6线程                                    0.52 ms/专家    25.70 GB/s 聚合
+done

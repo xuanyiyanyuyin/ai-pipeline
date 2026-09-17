@@ -1,0 +1,6 @@
+=== Wed Sep 16 00:24:32 UTC 2026 4 进程独立计算图 (spawn) ===
+  1 进程: 全部失败 [('err', 0, "No module named 'v4flash_chunked_sched'")]
+  2 进程: 全部失败 [('err', 1, "No module named 'v4flash_chunked_sched'"), ('err', 0, "No module named 'v4flash_chunked_sched'")]
+  4 进程: 全部失败 [('err', 3, "No module named 'v4flash_chunked_sched'"), ('err', 2, "No module named 'v4flash_chunked_sched'"), ('err', 1, "No module named 'v4flash_chunked_sched'"), ('err', 0, "No module named 'v4flash_chunked_sched'")]
+=== 结束 Wed Sep 16 00:24:37 UTC 2026 ===
+ALL-DONE

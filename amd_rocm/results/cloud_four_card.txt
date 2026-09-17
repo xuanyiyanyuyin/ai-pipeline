@@ -1,0 +1,161 @@
+[fp8] CUDA kernel 不可用 ([Errno 2] No such file or directory: '/workspace/C:/Users/<user>/.cache/huggingface/hub) -> 回退纯 PyTorch 反量化
+[rocm] finegrained_fp8 kernel -> 纯 PyTorch (matmul+grouped_matmul)
+=== 每卡一个专家计算图, 并发 1→4 张卡 ===
+  1 卡: 每卡 0.194 ms/专家(自身)  墙钟 0.87s  聚合 115 专家/秒  (单卡吞吐 115/s)
+/workspace/four_card_bench.py:42: UserWarning: HIP warning: an illegal memory access was encountered (Triggered internally at /app/pytorch/aten/src/ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h:83.)
+  f = (torch.nn.functional.silu(g.float()) * u.float()).to(torch.bfloat16)
+Exception in thread Thread-3 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/four_card_bench.py", line 42, in graph
+    f = (torch.nn.functional.silu(g.float()) * u.float()).to(torch.bfloat16)
+                                  ^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+  2 卡: 每卡 0.096 ms/专家(自身)  墙钟 0.06s  聚合 3178 专家/秒  (单卡吞吐 3178/s)
+Exception in thread Thread-6 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+Exception in thread Thread-5 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+Exception in thread Thread-4 (graph):
+    self._target(*self._args, **self._kwargs)
+Traceback (most recent call last):
+    self._target(*self._args, **self._kwargs)
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+  File "/workspace/four_card_bench.py", line 36, in graph
+  File "/workspace/four_card_bench.py", line 36, in graph
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/four_card_bench.py", line 36, in graph
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+                                ^^^^^^^^^
+  File "/workspace/four_card_bench.py", line 24, in prep
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+                                ^^^^^^^^^
+  File "/workspace/four_card_bench.py", line 24, in prep
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                ^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+  File "/workspace/four_card_bench.py", line 24, in prep
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+  3 卡: 每卡 0.000 ms/专家(自身)  墙钟 0.00s  聚合 96808 专家/秒  (单卡吞吐 96808/s)
+Exception in thread Thread-7 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+Exception in thread Thread-8 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+Exception in thread Thread-9 (graph):
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/four_card_bench.py", line 36, in graph
+    self._target(*self._args, **self._kwargs)
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/four_card_bench.py", line 36, in graph
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+Exception in thread Thread-10 (graph):
+Traceback (most recent call last):
+  File "/workspace/four_card_bench.py", line 36, in graph
+                                ^^^^^^^^^
+  File "/workspace/four_card_bench.py", line 24, in prep
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+                                ^^^^^^^^^
+  File "/workspace/four_card_bench.py", line 24, in prep
+    self.run()
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/threading.py", line 1010, in run
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+                                ^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/four_card_bench.py", line 24, in prep
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/workspace/four_card_bench.py", line 36, in graph
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+    w1, s1, w3, s3, w2, s2, x = prep(dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                ^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+  File "/workspace/four_card_bench.py", line 24, in prep
+    w1 = torch.zeros(N1, K1 // 2, dtype=torch.int8, device=dev)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+
+  4 卡: 每卡 0.000 ms/专家(自身)  墙钟 0.00s  聚合 115958 专家/秒  (单卡吞吐 115958/s)
+=== 激活路由往返开销 (8KB 激活 → 卡, 4KB 结果 → GPU0) ===
+Traceback (most recent call last):
+  File "/workspace/four_card_bench.py", line 71, in <module>
+    x = torch.randn(1, K1, dtype=torch.bfloat16, device='cuda:0')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: HIP error: an illegal memory access was encountered
+Search for `hipErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__HIPRT__TYPES.html for more information.
+HIP kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing AMD_SERIALIZE_KERNEL=3
+Compile with `TORCH_USE_HIP_DSA` to enable device-side assertions.
+

@@ -16,6 +16,7 @@
 | **LTX-2.5 视频引擎** | 22B / 48 blocks | 同左 | 2K (2560×1408) 视频，显存峰值 8.4GB |
 | **DeepSeek-V4-Flash 引擎** | **284B MoE / 149GB 权重** | 同左 | 自研 chunked 调度 + FP8 + CPU 侧 KV cache |
 | **Qwen3.6-35B 服务** | 35B | 同左 | 本地 LLM 后端，支撑 QQ 机器人 |
+| **AMD ROCm 移植**（`amd_rocm/`） | 同 284B MoE / 148.65GB | **4 × Radeon W7900D 51.5GB**（gfx1100） | TPOT 1.45s → **0.454 s/token**；4 路并发 **3.83 tok/s**；实测天花板 8 tok/s |
 
 ---
 
@@ -46,6 +47,7 @@ FLUX.2 上用这套把一个 60GB 的 transformer 压进 12GB。
 ├── flux*_3tier.py            FLUX / FLUX.2 三层搬运引擎
 ├── ltx25_*.py                LTX-2.5 自研视频引擎（e2e / VAE / 调度 / 验证）
 ├── v4flash_chunked_*.py      DeepSeek-V4-Flash 分块推理引擎 + 服务
+├── amd_rocm/                 ★ AMD ROCm 移植（gfx1100）：引擎 + 脚本 + 实测数据 + 技术详解
 ├── engine_manager.py         引擎统一管理面板（8321）
 ├── upscale4x.py              4x-UltraSharp 超分（分块 + RGBA）
 ├── llamacpp/                 本地 LLM 代理 + QQ 机器人适配层
@@ -64,4 +66,4 @@ FLUX.2 上用这套把一个 60GB 的 transformer 压进 12GB。
 
 ---
 
-*持续更新中 —— 当前方向：把自研引擎移植到 AMD ROCm（gfx1100）平台。*
+*持续更新中 —— AMD ROCm（gfx1100）移植已完成：4×W7900D 上 TPOT **0.454 s/token**、4 路并发 **3.83 tok/s**，见 [`amd_rocm/`](amd_rocm/)。*

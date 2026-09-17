@@ -1,0 +1,47 @@
+=== Wed Sep 16 00:36:19 UTC 2026 4 实例并发 === Wed Sep 16 00:36:19 UTC 2026 ===
+--- 启动 4 实例 ---
+实例0 → 端口 8123 (cuda:0) 已提交
+实例1 → 端口 8124 (cuda:1) 已提交
+实例2 → 端口 8125 (cuda:2) 已提交
+实例3 → 端口 8126 (cuda:3) 已提交
+--- 等 4 个实例就绪 (最多 10 分钟) ---
+4 个实例全部就绪 (50s)
+V4-Flash HTTP 服务 http://127.0.0.1:8123/v1
+V4-Flash HTTP 服务 http://127.0.0.1:8124/v1
+V4-Flash HTTP 服务 http://127.0.0.1:8125/v1
+V4-Flash HTTP 服务 http://127.0.0.1:8126/v1
+--- 显存 ---
+GPU[0]		: VRAM Total Memory (B): 51522830336
+GPU[0]		: VRAM Total Used Memory (B): 9358921728
+GPU[1]		: VRAM Total Memory (B): 51522830336
+GPU[1]		: VRAM Total Used Memory (B): 9358929920
+GPU[2]		: VRAM Total Memory (B): 51522830336
+GPU[2]		: VRAM Total Used Memory (B): 9358938112
+GPU[3]		: VRAM Total Memory (B): 51522830336
+GPU[3]		: VRAM Total Used Memory (B): 9358811136
+--- 内存 ---
+               total        used        free      shared  buff/cache   available
+Mem:             503          46         231           0         230         457
+--- 预热 4 个实例 (各 12 个提示词太长, 各跑 2 个) ---
+Terminated
+Terminated
+Terminated
+Terminated
+端口 8124 预热完成 0 字节
+端口 8123 预热完成 0 字节
+端口 8126 预热完成 0 字节
+端口 8125 预热完成 0 字节
+--- 并发测试 Wed Sep 16 00:43:43 UTC 2026 ---
+=== 4 实例并发: 每个实例一个 64-token 请求 ===
+  端口 8123: 3.0s, 40 字 | ERR [Errno 104] Connection res
+  端口 8124: 3.2s, 40 字 | ERR [Errno 104] Connection res
+  端口 8125: 3.0s, 40 字 | ERR [Errno 104] Connection res
+  端口 8126: 3.0s, 40 字 | ERR [Errno 104] Connection res
+  4 路并发墙钟 3.2s (各自单跑约 60-70s) → 并发加速 ≈ 81.82x
+[quad] DONE
+--- 各实例 status ---
+端口 8123: 
+端口 8124: 
+端口 8125: 
+端口 8126: 
+=== 结束 Wed Sep 16 00:43:46 UTC 2026 ===

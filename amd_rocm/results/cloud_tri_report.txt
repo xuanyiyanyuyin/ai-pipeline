@@ -1,0 +1,75 @@
+=== Tue Sep 15 22:11:40 UTC 2026 Triton FP4 融合算子版 bringup ===
+旧引擎已停
+
+首请求(含编译) 用时 22 秒
+=== status BEFORE ===
+
+=== 测速 Tue Sep 15 22:11:52 UTC 2026 ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/urllib/request.py", line 1344, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/usr/lib/python3.12/http/client.py", line 1356, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/usr/lib/python3.12/http/client.py", line 1402, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.12/http/client.py", line 1351, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.12/http/client.py", line 1111, in _send_output
+    self.send(msg)
+  File "/usr/lib/python3.12/http/client.py", line 1055, in send
+    self.connect()
+  File "/usr/lib/python3.12/http/client.py", line 1021, in connect
+    self.sock = self._create_connection(
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 852, in create_connection
+    raise exceptions[0]
+  File "/usr/lib/python3.12/socket.py", line 837, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/tpot_test.py", line 49, in <module>
+    ts, text = stream_ask(q, mt=32)
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/tpot_test.py", line 14, in stream_ask
+    with urllib.request.urlopen(req, timeout=3600) as r:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+=== status AFTER ===
+
+=== 结束 Tue Sep 15 22:11:52 UTC 2026 ===
+ALL-DONE
+就绪: 约 50 秒
+[mtp] 权重加载完成
+[mtp] MTP 模块就绪 (每轮 1+1 个 token, 速度≈×2)
+=== 预热专家缓存 ===
+{"running": true, "done": 0, "total": 11008, "err": ""}
+预热完成
+{"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 0, "store_hit": 0, "lru_hit": 0, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"lru_get": 240.627, "lru_copy": 364.51}, "mm": {}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== Triton 首编译 (小请求, 不计入) Tue Sep 15 22:15:11 UTC 2026 ===
+{"id": "chatcmpl-v4flash", "object": "chat.completion", "created": 1789510631, "model": "deepseek-v4-flash", "choices": [{"index": 0, "message": {"role": "assistant", "content": " （卫锦旗的私�
+首请求(含编译) 用时 300 秒
+=== status BEFORE ===
+{"ready": true, "active_requests": 0, "model": "deepseek-v4-flash", "mtp": true, "exp": {"hot_hit": 2183, "store_hit": 0, "lru_hit": 6144, "lru_miss": 11008, "hot_n": 2500, "store_n": 0, "lru_n": 11008, "tm": {"lru_get": 240.66, "lru_copy": 477.436, "fut_wait": 5.849, "moe_total": 100.178, "hot_lock": 0.017}, "mm": {"fp8_linear_1024x4096": [0.228, 3555], "fp8_linear_32768x1024": [0.019, 395], "fp8_linear_512x4096": [0.021, 395], "fp8_linear_4096x8192": [0.018, 395], "fp4_torch": [4.938, 5313], "fp4_triton": [3.413, 19896], "fp8_linear_2048x4096": [0.071, 790], "fp8_linear_4096x2048": [0.018, 395], "fp8_linear_8192x1024": [0.01, 189], "fp8_linear_4096x4096": [0.001, 16]}}, "gpu_experts": 15000, "prewarm": {"running": false, "done": 11008, "total": 11008, "err": ""}}
+=== 测速 Tue Sep 15 22:20:31 UTC 2026 ===
+第1次(从1数到30)      TTFT=  14.2s  块数= 60  TPOT=0.544s/token  (1.84 tok/s)  文本99字  ' "一、二、三、四、五、六、七、八、九、十、十一、十二、... ... \n\n（停'
+第2次(从1数到20)      未收到 token 块

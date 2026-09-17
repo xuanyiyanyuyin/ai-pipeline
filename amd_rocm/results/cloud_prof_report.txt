@@ -1,0 +1,15 @@
+=== py-spy? ===
+no py-spy
+installing...
+
+[notice] A new release of pip is available: 26.0.1 -> 26.2.1
+[notice] To update, run: /opt/venv/bin/python3.12 -m pip install --upgrade pip
+engine pid=4574
+=== py-spy record 70s ===
+Caused by:
+    0: Permission denied (os error 13)
+    1: Permission denied (os error 13)
+=== 采样行数 ===
+=== 按叶子函数聚合 (self time) ===
+=== 长请求结果 ===
+DONE
