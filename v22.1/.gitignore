@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.pt
+*.pth
+*.ckpt
+
+# local logs / generated artifacts
+logs/
+img2img_out/
+img2img_out_m2/
+
+# secrets
+.env
+.env.*
+*.key
+*.pem
+.gh_token

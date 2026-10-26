@@ -1,0 +1,7 @@
+# V22.1 runtime dependencies (versions not pinned; tested on Python 3.12 + CUDA 12.x)
+torch
+numpy
+opencv-python
+pynvml
+# optional: P3Vis LBP/GLCM features (falls back if missing)
+scikit-image
