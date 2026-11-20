@@ -229,33 +229,34 @@ def _quant(x2, mod=None):
                                                 ('p', 0), ('p', 0), ('p', 0)])
     return packed, to_blocked(scale.view(torch.float8_e4m3fn).reshape(M, K // 16)), g
 
-def fp4_refiner(t, sm):
+def fp4_refiner(t, sm, lora=None):
     for i in (0, 1):
         p = "token_refiner.blocks.%d." % i
+        side = dict((k[1], v) for k, v in lora.items() if k[0] == i) if lora else None
         x = he.rms(t, sm[p + "norm1.weight"])
-        qkv = he._qkv_fix(fp4_lin(x, sm[p + "attn.qkv_proj.weight"]))
+        qkv = he._add_lora(he._qkv_fix(fp4_lin(x, sm[p + "attn.qkv_proj.weight"])), x, side, "attn.qkv_proj")
         q = qkv[:, :, :7168].view(t.shape[0], -1, HEADS, HEAD_DIM)
         k = qkv[:, :, 7168:14336].view(t.shape[0], -1, HEADS, HEAD_DIM)
         v = qkv[:, :, 14336:].view(t.shape[0], -1, HEADS, HEAD_DIM)
         q = he.rms(q, sm[p + "attn.q_norm.weight"]); k = he.rms(k, sm[p + "attn.k_norm.weight"])
         o = he._sdpa(q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2))
         o = o.transpose(1, 2).reshape(t.shape[0], -1, HEADS * HEAD_DIM)
-        o = fp4_lin(o, sm[p + "attn.out_proj.weight"])
+        o = he._add_lora(fp4_lin(o, sm[p + "attn.out_proj.weight"]), o, side, "attn.out_proj")
         t = t + o
         x = he.rms(t, sm[p + "norm2.weight"])
-        a, g = fp4_lin(x, sm[p + "mlp.fc1.weight"]).chunk(2, dim=-1)
+        a, g = he._add_lora(fp4_lin(x, sm[p + "mlp.fc1.weight"]), x, side, "mlp.fc1").chunk(2, dim=-1)
         hh = he._swiglu(a, g)
-        t = t + fp4_lin(hh, sm[p + "mlp.fc2.weight"])
+        t = t + he._add_lora(fp4_lin(hh, sm[p + "mlp.fc2.weight"]), hh, side, "mlp.fc2")
     return he.rms(t, sm["token_refiner.final_norm.weight"])
 
-def fp4_block(x, st, mods, idx, cos, sin):
+def fp4_block(x, st, mods, idx, cos, sin, lora=None):
     sh1, sc1, g1, sh2, sc2, g2 = mods
     sh1 = sh1.index_select(0, idx).unsqueeze(0); sc1 = sc1.index_select(0, idx).unsqueeze(0)
     g1 = g1.index_select(0, idx).unsqueeze(0)
     sh2 = sh2.index_select(0, idx).unsqueeze(0); sc2 = sc2.index_select(0, idx).unsqueeze(0)
     g2 = g2.index_select(0, idx).unsqueeze(0)
     h = he.rms(x, st["norm1.weight"]); h = h * (1.0 + sc1) + sh1
-    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"]))
+    qkv = he._add_lora(he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"])), h, lora, "attn.qkv_proj")
     q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
     k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
     v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
@@ -264,12 +265,12 @@ def fp4_block(x, st, mods, idx, cos, sin):
     q, k, v = (t.transpose(1, 2) for t in (q, k, v))
     o = he._sdpa(q, k, v)
     o = o.transpose(1, 2).reshape(x.shape[0], -1, HEADS * HEAD_DIM)
-    o = fp4_lin(o, st["attn.out_proj.weight"])
+    o = he._add_lora(fp4_lin(o, st["attn.out_proj.weight"]), o, lora, "attn.out_proj")
     x = x + g1 * o
     h = he.rms(x, st["norm2.weight"]); h = h * (1.0 + sc2) + sh2
-    a, g = fp4_lin(h, st["mlp.fc1.weight"]).chunk(2, dim=-1)
-    h = he._swiglu(a, g)
-    h = fp4_lin(h, st["mlp.fc2.weight"])
+    a, g = he._add_lora(fp4_lin(h, st["mlp.fc1.weight"]), h, lora, "mlp.fc1").chunk(2, dim=-1)
+    hh = he._swiglu(a, g)
+    h = he._add_lora(fp4_lin(hh, st["mlp.fc2.weight"]), hh, lora, "mlp.fc2")
     return x + g2 * h
 
 def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_idx,
@@ -278,7 +279,7 @@ def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_i
     ve = he.lin(ximg.to(DEV, sm["video_patch_proj.weight"].dtype),
                 sm["video_patch_proj.weight"], sm["video_patch_proj.bias"])
     te = he.lin(cond.to(DEV, DTYPE), sm["condition_proj.weight"], sm["condition_proj.bias"])
-    te = fp4_refiner(te, sm)
+    te = fp4_refiner(te, sm, he.refiner_lora())
     L = pos.shape[0]
     h = te.new_zeros((te.shape[0], L, te.shape[-1]))
     h = h.index_copy(1, text_idx.to(DEV), te)
@@ -288,7 +289,7 @@ def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_i
     for i in range(reader.n):
         st = layer_fn(i)
         mods = cache["s%d_l%d" % (step_i, i)].to(DEV).unbind(0)   # 6 x [3,HID]
-        h = fp4_block(h, st, mods, idx, cos, sin)
+        h = fp4_block(h, st, mods, idx, cos, sin, he.lora_side(i))
         if i % 10 == 0 or i == reader.n - 1:
             log("[d] layer %d/%d %.1fs VRAM %.2fGB" % (i, reader.n, time.perf_counter() - t0,
                 torch.cuda.memory_allocated() / 1024 ** 3))

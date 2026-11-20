@@ -8,7 +8,6 @@ import os, sys, glob, json, time, argparse
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import torch
 from safetensors.torch import load_file
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, r"D:\ai")
 import h3_engine as he
 import h3image_engine_fp4 as F4
@@ -121,7 +120,7 @@ def fp4_dit_forward(reader, x_video, x_audio, cond, timestep, timestep_indices, 
     ve = he.lin(x_video.to(DEV, sm["video_patch_proj.weight"].dtype), sm["video_patch_proj.weight"], sm["video_patch_proj.bias"])
     ae = he.lin(x_audio.to(DEV, sm["audio_patch_proj.weight"].dtype), sm["audio_patch_proj.weight"], sm["audio_patch_proj.bias"])
     te = he.lin(cond.to(DEV, he.DTYPE), sm["condition_proj.weight"], sm["condition_proj.bias"])
-    te = F4.fp4_refiner(te, sm)
+    te = F4.fp4_refiner(te, sm, he.refiner_lora())
     L = position_ids.shape[0]
     h = te.new_zeros((te.shape[0], L, te.shape[-1]))
     h = h.index_copy(1, text_indices.to(DEV), te)
@@ -134,7 +133,7 @@ def fp4_dit_forward(reader, x_video, x_audio, cond, timestep, timestep_indices, 
     for i in range(reader.n):
         st = layer_fn(i)
         mods = c['l%d' % i][:, tmap, :, :].to(DEV).reshape(6, n_t * MODE_NUM, HID).unbind(0)
-        h = F4.fp4_block(h, st, mods, idx, cos, sin)
+        h = F4.fp4_block(h, st, mods, idx, cos, sin, he.lora_side(i))
         if verbose and (i % 10 == 0 or i == reader.n - 1):
             print("[e] layer %d/%d %.1fs VRAM %.2fGB" % (i, reader.n, time.perf_counter() - t0,
                   torch.cuda.memory_allocated() / 1024 ** 3), flush=True)
