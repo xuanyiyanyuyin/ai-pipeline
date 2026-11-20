@@ -66,6 +66,20 @@ k1 的 9.4% 是 E2M1（1 位尾数）固有地板，全组件一致；选块救�
 - **时序**：每tile跑全部帧（时序不分块）⇒tile内运动连贯；ref/audio全tile共享。时序分块(切帧+时序blend)未做=下一层工程。
 - 每 tile 固定开销(50层 kernel+量化~3-4s)是小 L 主导；分块省注意力 O(L²) 但不省固定开销。
 
+## 自研融合NVFP4量化算子（NVRTC官方运行时编译，免MSVC/UAC/4GB toolkit）
+- `fused_quant.cu`：单kernel完成 absmax/16→FP8 scale→E2M1舍入→pack（一线程一16块）。
+- NVRTC(`nvidia-cuda-nvrtc-cu12`官方pip)编sm_120 cubin + cuda.bindings driver加载，**无需nvcc/MSVC**。
+- 实测 **0.091ms vs Python quant_act 14.47ms = 160×**，scale逐位一致（packed仅舍入tie差）。
+- 已接入 `fp4_lin`(_quant)：砍掉4K那24%量化开销；nvrtc失败自动回退quant_act。
+- 装编译器正路=CUDA toolkit+MSVC(几GB+UAC)；NVRTC是轻量官方替代（~50MB pip）。
+
+## SM120 FP4 峰值（空闲实测，不拉频/功率/任何硬件）
+- **峰值 415 TFLOPS @ 8192³**（对齐128方阵）≈ **6.7× BF16(62)**；H3 FFN形状(4096×28672×5376)=400 TFLOPS。
+- 16384³ 掉到224（超显存/occupancy甜点）；长条(28672×5376)400；**8192³方阵最优**。
+- **游戏负载会把峰值压到~179**（争抢SM/带宽）⇒测峰值须GPU空闲。
+- `use_fast_accum=True` 对FP4不支持（torch报错）；trtllm-gen/DeepGEMM SM120不可用⇒只能CUTLASS `_scaled_mm_v2`+形状优化。
+- 拉功率参考：5070默认250W、厂商标定175-280W；250→280(+12%)仅+5-8%（频率天花板边际递减）；>280W=烧风险别碰；降压(undervolt)更划算。
+
 ## k 各级别：精度 / 体积 / 速度预估（残差套娃，等价拆分不旋转）
 | 级别 | bit/权重 | 往返relL2 | DiT核心体积 | 画质 | 适用 |
 |---|---|---|---|---|---|

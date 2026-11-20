@@ -10,7 +10,6 @@ import torch
 import torch.nn.functional as F
 from safetensors.torch import load_file
 from torch._C import _ScalingType as ST, _SwizzleType as SW
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, r"D:\ai")
 import h3_engine as he
 import h3image_engine as base
@@ -147,15 +146,62 @@ def fp4_lin(x, w):
     M = x2.shape[0]
     CH = 4096   # bound quant temporaries (int64 bucketize / fp32 blocks) per chunk at 4K
     if M <= CH:
-        xp, xs_sw, xg = quant_act(x2)
+        xp, xs_sw, xg = _quant(x2)
         out = fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g'])
     else:
         outs = []
         for s in range(0, M, CH):
-            xp, xs_sw, xg = quant_act(x2[s:s + CH])
+            xp, xs_sw, xg = _quant(x2[s:s + CH])
             outs.append(fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g']))
         out = torch.cat(outs, 0)
     return out.reshape(B, L, w['N']).to(DTYPE)
+
+# ---- self-developed fused NVFP4 activation-quant kernel (NVRTC, official, no MSVC) ----
+_FUSED = None
+def _init_fused():
+    global _FUSED
+    if _FUSED is not None: return _FUSED
+    try:
+        import ctypes
+        from cuda.bindings import nvrtc, driver
+        cu = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fused_quant.cu')).read()
+        prog = nvrtc.nvrtcCreateProgram(cu.encode(), b'fused_quant.cu', 0, [], [])[1]
+        inc = os.path.join(os.path.dirname(torch.__file__), 'Lib', 'site-packages', 'nvidia', 'cuda_runtime', 'include')
+        if not os.path.exists(inc):
+            import nvidia.cuda_runtime  # noqa
+            inc = os.path.join(os.path.dirname(nvidia.cuda_runtime.__file__), 'include')
+        opts = [b'--gpu-architecture=sm_120', b'--std=c++17', b'-I' + inc.encode()]
+        r = nvrtc.nvrtcCompileProgram(prog, len(opts), opts)
+        if int(r[0]) != 0: return None
+        csz = nvrtc.nvrtcGetCUBINSize(prog)[1]; cb = bytearray(csz); nvrtc.nvrtcGetCUBIN(prog, cb)
+        mod = driver.cuModuleLoadData(bytes(cb))[1]
+        fn = driver.cuModuleGetFunction(mod, b'fused_quant')[1]
+        class Args(ctypes.Structure):
+            _fields_ = [("x", ctypes.c_void_p), ("g", ctypes.c_float), ("p", ctypes.c_void_p),
+                        ("s", ctypes.c_void_p), ("nb", ctypes.c_long), ("K", ctypes.c_int)]
+        _FUSED = (fn, Args, driver)
+        return _FUSED
+    except Exception:
+        return None
+
+def _quant(x2):
+    import ctypes
+    f = _init_fused()
+    if f is None:
+        return quant_act(x2)
+    fn, Args, driver = f
+    M, K = x2.shape
+    g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
+    nb = M * (K // 16)
+    packed = torch.empty(M, K // 2, dtype=torch.uint8, device=DEV)
+    scale = torch.empty(nb, dtype=torch.uint8, device=DEV)
+    a = Args(x2.data_ptr(), float(g.item()), packed.data_ptr(), scale.data_ptr(), nb, K)
+    base = ctypes.addressof(a)
+    params = (ctypes.c_void_p * 6)()
+    for i, fld in enumerate(["x", "g", "p", "s", "nb", "K"]):
+        params[i] = ctypes.c_void_p(base + getattr(Args, fld).offset)
+    driver.cuLaunchKernel(fn, (nb + 255) // 256, 1, 1, 256, 1, 1, 0, torch.cuda.current_stream().cuda_stream, params, 0)
+    return packed, to_blocked(scale.view(torch.float8_e4m3fn).reshape(M, K // 16)), g
 
 def fp4_refiner(t, sm):
     for i in (0, 1):
