@@ -50,11 +50,14 @@ def fp4_gemm(a4, b4, sa_sw, ga, sb_sw, gb, out_dtype=torch.bfloat16):
         bias=None, out_dtype=out_dtype)
 
 def quant_act(x2):
-    M, K = x2.shape; xf = x2.to(DEV).float()
-    g = (448 * 6) / xf.abs().max().clamp(min=1e-12)
-    b = xf.reshape(M, K // 16, 16); am = b.abs().amax(-1, keepdim=True).clamp(min=1e-12)
+    # bf16 throughout: max/amax/bucketize need no [M,K] fp32 copy (that temporary thrashed VRAM at 4K)
+    M, K = x2.shape; x2 = x2.to(DEV)
+    g = (448 * 6) / x2.abs().amax().float().clamp(min=1e-12)
+    b = x2.reshape(M, K // 16, 16)
+    am = b.abs().amax(-1, keepdim=True).float().clamp(min=1e-12)
     s = ((am / 6) * g).to(fp8); se = s.float().clamp(min=1e-12)
-    n = (b * g / se).clamp(-6, 6); idx = torch.bucketize(n.abs(), MID).to(torch.uint8)
+    n = (b * (g / se).to(x2.dtype)).clamp(-6, 6)
+    idx = torch.bucketize(n.abs(), MID.to(n.dtype)).to(torch.uint8)
     code = ((n < 0).to(torch.uint8) << 3) | idx; code = code.reshape(M, K)
     packed = (code[:, 0::2] | (code[:, 1::2] << 4)).contiguous()
     return packed, to_blocked(s.squeeze(-1).reshape(M, K // 16)), g.reshape(1)
@@ -171,10 +174,11 @@ def _init_fused():
         from cuda.bindings import nvrtc, driver
         cu = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fused_quant.cu')).read()
         prog = nvrtc.nvrtcCreateProgram(cu.encode(), b'fused_quant.cu', 0, [], [])[1]
-        inc = os.path.join(os.path.dirname(torch.__file__), 'Lib', 'site-packages', 'nvidia', 'cuda_runtime', 'include')
+        sp = os.path.dirname(os.path.dirname(os.path.abspath(torch.__file__)))
+        inc = os.path.join(sp, 'nvidia', 'cuda_runtime', 'include')
         if not os.path.exists(inc):
-            import nvidia.cuda_runtime  # noqa
-            inc = os.path.join(os.path.dirname(nvidia.cuda_runtime.__file__), 'include')
+            import nvidia.cuda_runtime  # noqa  (namespace pkg: __file__ is None, use __path__)
+            inc = os.path.join(list(nvidia.cuda_runtime.__path__)[0], 'include')
         opts = [b'--gpu-architecture=sm_120', b'--std=c++17', b'-I' + inc.encode()]
         r = nvrtc.nvrtcCompileProgram(prog, len(opts), opts)
         if int(r[0]) != 0: return None
@@ -218,7 +222,7 @@ def _quant(x2, mod=None):
                                              ('p', idx.data_ptr()), ('p', amout.data_ptr()), ('f', gf),
                                              ('p', packed.data_ptr()), ('p', scale.data_ptr()), ('l', nb), ('i', K)])
     else:
-        g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
+        g = (448 * 6) / x2.abs().amax().float().clamp(min=1e-12)
         gf = float(g.item())
         _launch(driver, fns['fused_quant'], nb, [('p', x2.data_ptr()), ('f', gf), ('p', packed.data_ptr()),
                                                 ('p', scale.data_ptr()), ('l', nb), ('i', K),
@@ -244,7 +248,7 @@ def fp4_refiner(t, sm):
         t = t + fp4_lin(hh, sm[p + "mlp.fc2.weight"])
     return he.rms(t, sm["token_refiner.final_norm.weight"])
 
-def _block_torchmod(x, st, mods, idx, cos, sin):
+def fp4_block(x, st, mods, idx, cos, sin):
     sh1, sc1, g1, sh2, sc2, g2 = mods
     sh1 = sh1.index_select(0, idx).unsqueeze(0); sc1 = sc1.index_select(0, idx).unsqueeze(0)
     g1 = g1.index_select(0, idx).unsqueeze(0)
@@ -267,35 +271,6 @@ def _block_torchmod(x, st, mods, idx, cos, sin):
     h = he._swiglu(a, g)
     h = fp4_lin(h, st["mlp.fc2.weight"])
     return x + g2 * h
-
-def _block_fusedmod(x, st, mods, idx, cos, sin):
-    # large-L: mod inside quant kernel avoids the M*K fp32 global-max temporary that thrashes VRAM
-    sh1, sc1, g1, sh2, sc2, g2 = mods
-    g1 = g1.index_select(0, idx).unsqueeze(0)
-    g2 = g2.index_select(0, idx).unsqueeze(0)
-    h = he.rms(x, st["norm1.weight"])
-    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"], mod=(sc1, sh1, idx)))
-    q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    q = he.rms(q, st["attn.q_norm.weight"]); k = he.rms(k, st["attn.k_norm.weight"])
-    q = he.rope_apply(q, cos, sin); k = he.rope_apply(k, cos, sin)
-    q, k, v = (t.transpose(1, 2) for t in (q, k, v))
-    o = he._sdpa(q, k, v)
-    o = o.transpose(1, 2).reshape(x.shape[0], -1, HEADS * HEAD_DIM)
-    o = fp4_lin(o, st["attn.out_proj.weight"])
-    x = x + g1 * o
-    h = he.rms(x, st["norm2.weight"])
-    a, g = fp4_lin(h, st["mlp.fc1.weight"], mod=(sc2, sh2, idx)).chunk(2, dim=-1)
-    h = he._swiglu(a, g)
-    h = fp4_lin(h, st["mlp.fc2.weight"])
-    return x + g2 * h
-
-def fp4_block(x, st, mods, idx, cos, sin):
-    # measured: 512 torch 1.6s/step vs fused 2.8; 2K tie; 4K torch 99s vs fused 44.5s => switch at L>=8192
-    if x.shape[1] >= 8192:
-        return _block_fusedmod(x, st, mods, idx, cos, sin)
-    return _block_torchmod(x, st, mods, idx, cos, sin)
 
 def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_idx,
                     sm, layer_fn, pdd_w, pdd_b, cache):

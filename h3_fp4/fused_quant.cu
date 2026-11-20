@@ -5,18 +5,18 @@
 extern "C" __global__ void mod_am(const __nv_bfloat16* __restrict__ x,
                                   const __nv_bfloat16* __restrict__ sc,
                                   const __nv_bfloat16* __restrict__ sh,
-                                  const long* __restrict__ idx,
-                                  float* __restrict__ amout, long nblocks, int K) {
-  long b = (long)blockIdx.x * blockDim.x + threadIdx.x;
+                                  const long long* __restrict__ idx,
+                                  float* __restrict__ amout, long long nblocks, int K) {
+  long long b = (long long)blockIdx.x * blockDim.x + threadIdx.x;
   if (b >= nblocks) return;
   int kb = (int)(b % (K / 16));
-  long row = b / (K / 16);
-  long ir = idx[row];
+  long long row = b / (K / 16);
+  long long ir = idx[row];
   const __nv_bfloat16* xp = x + row * K + kb * 16;
   float am = 0.f;
   #pragma unroll
   for (int i = 0; i < 16; i++) {
-    long k = kb * 16 + i;
+    long long k = kb * 16 + i;
     float v = __bfloat162float(xp[i]) * (1.f + __bfloat162float(sc[ir * K + k])) + __bfloat162float(sh[ir * K + k]);
     am = fmaxf(am, fabsf(v));
   }
@@ -27,16 +27,16 @@ extern "C" __global__ void mod_am(const __nv_bfloat16* __restrict__ x,
 extern "C" __global__ void quant_am(const __nv_bfloat16* __restrict__ x,
                                     const __nv_bfloat16* __restrict__ sc,
                                     const __nv_bfloat16* __restrict__ sh,
-                                    const long* __restrict__ idx,
+                                    const long long* __restrict__ idx,
                                     const float* __restrict__ amout, float g,
                                     unsigned char* __restrict__ packed,
                                     __nv_fp8_storage_t* __restrict__ scale,
-                                    long nblocks, int K) {
-  long b = (long)blockIdx.x * blockDim.x + threadIdx.x;
+                                    long long nblocks, int K) {
+  long long b = (long long)blockIdx.x * blockDim.x + threadIdx.x;
   if (b >= nblocks) return;
   int kb = (int)(b % (K / 16));
-  long row = b / (K / 16);
-  long ir = idx[row];
+  long long row = b / (K / 16);
+  long long ir = idx[row];
   const __nv_bfloat16* xp = x + row * K + kb * 16;
   float am = amout[b];
   float s = (am / 6.0f) * g;
@@ -49,7 +49,7 @@ extern "C" __global__ void quant_am(const __nv_bfloat16* __restrict__ x,
   for (int i = 0; i < 8; i++) {
     unsigned char c0 = 0, c1 = 0;
     for (int j = 0; j < 2; j++) {
-      long k = kb * 16 + i * 2 + j;
+      long long k = kb * 16 + i * 2 + j;
       float v = __bfloat162float(xp[i*2+j]) * (1.f + __bfloat162float(sc[ir * K + k])) + __bfloat162float(sh[ir * K + k]);
       float n = v * g / se; n = fminf(fmaxf(n, -6.f), 6.f);
       float a = fabsf(n);
@@ -68,11 +68,11 @@ extern "C" __global__ void quant_am(const __nv_bfloat16* __restrict__ x,
 extern "C" __global__ void fused_quant(const __nv_bfloat16* __restrict__ x,
                                        float g, unsigned char* __restrict__ packed,
                                        __nv_fp8_storage_t* __restrict__ scale,
-                                       long nblocks, int K,
+                                       long long nblocks, int K,
                                        const __nv_bfloat16* __restrict__ sc,
                                        const __nv_bfloat16* __restrict__ sh,
-                                       const long* __restrict__ idx) {
-  long b = (long)blockIdx.x * blockDim.x + threadIdx.x;
+                                       const long long* __restrict__ idx) {
+  long long b = (long long)blockIdx.x * blockDim.x + threadIdx.x;
   if (b >= nblocks) return;
   const __nv_bfloat16* xp = x + b * 16;
   float v[16]; float am = 0.f;
