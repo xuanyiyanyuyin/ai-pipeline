@@ -162,13 +162,12 @@ def fp4_lin(x, w, mod=None):
         out = torch.cat(outs, 0)
     return out.reshape(B, L, w['N']).to(DTYPE)
 
-# ---- self-developed fused NVFP4 activation-quant kernel (NVRTC, official, no MSVC) ----
+# ---- self-developed fused NVFP4 activation-quant kernels (NVRTC, official, no MSVC) ----
 _FUSED = None
 def _init_fused():
     global _FUSED
     if _FUSED is not None: return _FUSED
     try:
-        import ctypes
         from cuda.bindings import nvrtc, driver
         cu = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fused_quant.cu')).read()
         prog = nvrtc.nvrtcCreateProgram(cu.encode(), b'fused_quant.cu', 0, [], [])[1]
@@ -181,43 +180,49 @@ def _init_fused():
         if int(r[0]) != 0: return None
         csz = nvrtc.nvrtcGetCUBINSize(prog)[1]; cb = bytearray(csz); nvrtc.nvrtcGetCUBIN(prog, cb)
         mod = driver.cuModuleLoadData(bytes(cb))[1]
-        fn = driver.cuModuleGetFunction(mod, b'fused_quant')[1]
-        class Args(ctypes.Structure):
-            _fields_ = [("x", ctypes.c_void_p), ("g", ctypes.c_float), ("p", ctypes.c_void_p),
-                        ("s", ctypes.c_void_p), ("nb", ctypes.c_long), ("K", ctypes.c_int),
-                        ("sc", ctypes.c_void_p), ("sh", ctypes.c_void_p), ("idx", ctypes.c_void_p)]
-        _FUSED = (fn, Args, driver)
+        fns = {n: driver.cuModuleGetFunction(mod, n.encode())[1] for n in ('mod_am', 'quant_am', 'fused_quant')}
+        _FUSED = (driver, fns)
         return _FUSED
     except Exception:
         return None
 
-def _quant(x2, mod=None):
+def _launch(driver, fn, nb, argspec):
     import ctypes
+    objs = []
+    for t, v in argspec:
+        objs.append(ctypes.c_void_p(v) if t == 'p' else ctypes.c_float(v) if t == 'f'
+                    else ctypes.c_longlong(v) if t == 'l' else ctypes.c_int(v))
+    params = (ctypes.c_void_p * len(objs))(*[ctypes.addressof(o) for o in objs])
+    driver.cuLaunchKernel(fn, (nb + 255) // 256, 1, 1, 256, 1, 1, 0, torch.cuda.current_stream().cuda_stream, params, 0)
+
+def _quant(x2, mod=None):
     f = _init_fused()
     if f is None:
         if mod is not None:
             sc, sh, idx = mod
-            x2 = x2 * (1.0 + sc.index_select(0, idx).unsqueeze(0) if x2.dim()==3 else sc[idx]) + sh[idx]
+            x2 = x2 * (1.0 + sc[idx]) + sh[idx]
         return quant_act(x2)
-    fn, Args, driver = f
+    driver, fns = f
     M, K = x2.shape
-    sc, sh, idx = mod if mod else (None, None, None)
-    if mod is not None:
-        xm = x2 * (1.0 + sc[idx]) + sh[idx]   # g must match the MODDED values the kernel quantizes
-        g = (448 * 6) / xm.float().abs().max().clamp(min=1e-12)
-    else:
-        g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
     nb = M * (K // 16)
     packed = torch.empty(M, K // 2, dtype=torch.uint8, device=DEV)
     scale = torch.empty(nb, dtype=torch.uint8, device=DEV)
-    a = Args(x2.data_ptr(), float(g.item()), packed.data_ptr(), scale.data_ptr(), nb, K,
-             sc.data_ptr() if sc is not None else 0, sh.data_ptr() if sh is not None else 0,
-             idx.data_ptr() if idx is not None else 0)
-    base = ctypes.addressof(a)
-    params = (ctypes.c_void_p * 9)()
-    for i, fld in enumerate(["x", "g", "p", "s", "nb", "K", "sc", "sh", "idx"]):
-        params[i] = ctypes.c_void_p(base + getattr(Args, fld).offset)
-    driver.cuLaunchKernel(fn, (nb + 255) // 256, 1, 1, 256, 1, 1, 0, torch.cuda.current_stream().cuda_stream, params, 0)
+    if mod is not None:
+        sc, sh, idx = mod
+        amout = torch.empty(nb, dtype=torch.float32, device=DEV)
+        _launch(driver, fns['mod_am'], nb, [('p', x2.data_ptr()), ('p', sc.data_ptr()), ('p', sh.data_ptr()),
+                                           ('p', idx.data_ptr()), ('p', amout.data_ptr()), ('l', nb), ('i', K)])
+        g = (448 * 6) / amout.max().clamp(min=1e-12)   # same am source as kernel => no fp8 saturation
+        gf = float(g.item())
+        _launch(driver, fns['quant_am'], nb, [('p', x2.data_ptr()), ('p', sc.data_ptr()), ('p', sh.data_ptr()),
+                                             ('p', idx.data_ptr()), ('p', amout.data_ptr()), ('f', gf),
+                                             ('p', packed.data_ptr()), ('p', scale.data_ptr()), ('l', nb), ('i', K)])
+    else:
+        g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
+        gf = float(g.item())
+        _launch(driver, fns['fused_quant'], nb, [('p', x2.data_ptr()), ('f', gf), ('p', packed.data_ptr()),
+                                                ('p', scale.data_ptr()), ('l', nb), ('i', K),
+                                                ('p', 0), ('p', 0), ('p', 0)])
     return packed, to_blocked(scale.view(torch.float8_e4m3fn).reshape(M, K // 16)), g
 
 def fp4_refiner(t, sm):
@@ -241,12 +246,10 @@ def fp4_refiner(t, sm):
 
 def fp4_block(x, st, mods, idx, cos, sin):
     sh1, sc1, g1, sh2, sc2, g2 = mods
-    sh1 = sh1.index_select(0, idx).unsqueeze(0); sc1 = sc1.index_select(0, idx).unsqueeze(0)
     g1 = g1.index_select(0, idx).unsqueeze(0)
-    sh2 = sh2.index_select(0, idx).unsqueeze(0); sc2 = sc2.index_select(0, idx).unsqueeze(0)
     g2 = g2.index_select(0, idx).unsqueeze(0)
-    h = he.rms(x, st["norm1.weight"]); h = h * (1.0 + sc1) + sh1
-    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"]))
+    h = he.rms(x, st["norm1.weight"])
+    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"], mod=(sc1, sh1, idx)))
     q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
     k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
     v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
@@ -257,8 +260,8 @@ def fp4_block(x, st, mods, idx, cos, sin):
     o = o.transpose(1, 2).reshape(x.shape[0], -1, HEADS * HEAD_DIM)
     o = fp4_lin(o, st["attn.out_proj.weight"])
     x = x + g1 * o
-    h = he.rms(x, st["norm2.weight"]); h = h * (1.0 + sc2) + sh2
-    a, g = fp4_lin(h, st["mlp.fc1.weight"]).chunk(2, dim=-1)
+    h = he.rms(x, st["norm2.weight"])
+    a, g = fp4_lin(h, st["mlp.fc1.weight"], mod=(sc2, sh2, idx)).chunk(2, dim=-1)
     h = he._swiglu(a, g)
     h = fp4_lin(h, st["mlp.fc2.weight"])
     return x + g2 * h
