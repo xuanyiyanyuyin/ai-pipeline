@@ -14,6 +14,11 @@ sys.path.insert(0, r"D:\ai")
 import h3_engine as he
 import h3image_engine as base
 
+# 魔改1: fused rms_norm (1 kernel) replaces manual pow/mean/rsqrt (5 kernels), FP4 path only
+def _fused_rms(x, w, eps=1e-5):
+    return F.rms_norm(x.float(), (x.shape[-1],), w.float(), eps).to(w.dtype)
+he.rms = _fused_rms
+
 FP4_DIR = r"D:\ai\models\MiniMax-H3-Image-FP4\transformer"
 CACHE_FILE = os.path.join(FP4_DIR, "adaln_cache.safetensors")
 DEV = "cuda"; DTYPE = torch.bfloat16
@@ -140,18 +145,19 @@ def make_layer_fn(reader, resident):
         return st
     return layer
 
-def fp4_lin(x, w):
+def fp4_lin(x, w, mod=None):
     B, L, K = x.shape
     x2 = x.reshape(B * L, K)
     M = x2.shape[0]
     CH = 4096   # bound quant temporaries (int64 bucketize / fp32 blocks) per chunk at 4K
     if M <= CH:
-        xp, xs_sw, xg = _quant(x2)
+        xp, xs_sw, xg = _quant(x2, mod)
         out = fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g'])
     else:
         outs = []
         for s in range(0, M, CH):
-            xp, xs_sw, xg = _quant(x2[s:s + CH])
+            mc = (mod[0], mod[1], mod[2][s:s + CH]) if mod else None
+            xp, xs_sw, xg = _quant(x2[s:s + CH], mc)
             outs.append(fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g']))
         out = torch.cat(outs, 0)
     return out.reshape(B, L, w['N']).to(DTYPE)
@@ -178,27 +184,38 @@ def _init_fused():
         fn = driver.cuModuleGetFunction(mod, b'fused_quant')[1]
         class Args(ctypes.Structure):
             _fields_ = [("x", ctypes.c_void_p), ("g", ctypes.c_float), ("p", ctypes.c_void_p),
-                        ("s", ctypes.c_void_p), ("nb", ctypes.c_long), ("K", ctypes.c_int)]
+                        ("s", ctypes.c_void_p), ("nb", ctypes.c_long), ("K", ctypes.c_int),
+                        ("sc", ctypes.c_void_p), ("sh", ctypes.c_void_p), ("idx", ctypes.c_void_p)]
         _FUSED = (fn, Args, driver)
         return _FUSED
     except Exception:
         return None
 
-def _quant(x2):
+def _quant(x2, mod=None):
     import ctypes
     f = _init_fused()
     if f is None:
+        if mod is not None:
+            sc, sh, idx = mod
+            x2 = x2 * (1.0 + sc.index_select(0, idx).unsqueeze(0) if x2.dim()==3 else sc[idx]) + sh[idx]
         return quant_act(x2)
     fn, Args, driver = f
     M, K = x2.shape
-    g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
+    sc, sh, idx = mod if mod else (None, None, None)
+    if mod is not None:
+        xm = x2 * (1.0 + sc[idx]) + sh[idx]   # g must match the MODDED values the kernel quantizes
+        g = (448 * 6) / xm.float().abs().max().clamp(min=1e-12)
+    else:
+        g = (448 * 6) / x2.float().abs().max().clamp(min=1e-12)
     nb = M * (K // 16)
     packed = torch.empty(M, K // 2, dtype=torch.uint8, device=DEV)
     scale = torch.empty(nb, dtype=torch.uint8, device=DEV)
-    a = Args(x2.data_ptr(), float(g.item()), packed.data_ptr(), scale.data_ptr(), nb, K)
+    a = Args(x2.data_ptr(), float(g.item()), packed.data_ptr(), scale.data_ptr(), nb, K,
+             sc.data_ptr() if sc is not None else 0, sh.data_ptr() if sh is not None else 0,
+             idx.data_ptr() if idx is not None else 0)
     base = ctypes.addressof(a)
-    params = (ctypes.c_void_p * 6)()
-    for i, fld in enumerate(["x", "g", "p", "s", "nb", "K"]):
+    params = (ctypes.c_void_p * 9)()
+    for i, fld in enumerate(["x", "g", "p", "s", "nb", "K", "sc", "sh", "idx"]):
         params[i] = ctypes.c_void_p(base + getattr(Args, fld).offset)
     driver.cuLaunchKernel(fn, (nb + 255) // 256, 1, 1, 256, 1, 1, 0, torch.cuda.current_stream().cuda_stream, params, 0)
     return packed, to_blocked(scale.view(torch.float8_e4m3fn).reshape(M, K // 16)), g

@@ -1,17 +1,31 @@
 #include <cuda_bf16.h>
 #include <cuda_fp8.h>
 
-// one thread per 16-elem block: absmax -> fp8 scale -> E2M1 round -> pack 8 bytes
+// fused modulation + NVFP4 quant: one thread per 16-elem block.
+// if sc != null: v = h*(1+sc[idx[row],k]) + sh[idx[row],k]  (AdaLN modulation) before quant.
 extern "C" __global__ void fused_quant(const __nv_bfloat16* __restrict__ x,
                                        float g, unsigned char* __restrict__ packed,
                                        __nv_fp8_storage_t* __restrict__ scale,
-                                       long nblocks, int K) {
+                                       long nblocks, int K,
+                                       const __nv_bfloat16* __restrict__ sc,
+                                       const __nv_bfloat16* __restrict__ sh,
+                                       const long* __restrict__ idx) {
   long b = (long)blockIdx.x * blockDim.x + threadIdx.x;
   if (b >= nblocks) return;
-  const __nv_bfloat16* xp = x + b * 16;
+  int kb = (int)(b % (K / 16));
+  long row = b / (K / 16);
+  long ir = idx ? idx[row] : 0;
+  const __nv_bfloat16* xp = x + row * K + kb * 16;
   float v[16]; float am = 0.f;
   #pragma unroll
-  for (int i = 0; i < 16; i++) { v[i] = __bfloat162float(xp[i]); float a = fabsf(v[i]); am = fmaxf(am, a); }
+  for (int i = 0; i < 16; i++) {
+    float val = __bfloat162float(xp[i]);
+    if (sc) {
+      long k = kb * 16 + i;
+      val = val * (1.f + __bfloat162float(sc[ir * K + k])) + __bfloat162float(sh[ir * K + k]);
+    }
+    v[i] = val; float a = fabsf(val); am = fmaxf(am, a);
+  }
   am = fmaxf(am, 1e-12f);
   float s = (am / 6.0f) * g;
   __nv_fp8_storage_t s8 = __nv_cvt_float_to_fp8(s, __NV_SATFINITE, __NV_E4M3);
