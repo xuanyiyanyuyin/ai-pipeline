@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 from safetensors.torch import load_file
 from torch._C import _ScalingType as ST, _SwizzleType as SW
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, r"D:\ai")
 import h3_engine as he
 import h3image_engine as base

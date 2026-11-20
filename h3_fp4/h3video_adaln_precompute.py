@@ -5,6 +5,7 @@ import os, sys, json, time
 import torch
 import torch.nn.functional as F
 from safetensors.torch import load_file, save_file
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, r'D:\ai')
 import h3_engine as he
 

@@ -4,11 +4,18 @@
 权重**事先离线全量化**（运行时不量化/不反量化权重）；激活量化为 W4A4 固有在线成本。
 BF16 原件保留不删。2026-11-20 实测。
 
-## 文件
+## 文件（自包含，sys.path 已含本目录）
+- **基础BF16引擎（依赖，已随附）**：`h3_engine.py`（视频：rms/rope/SDPA/SwiGLU/_qkv_fix/位置网格/Reader/auto_slice/VAE编解码/run_ref2va）、`h3image_engine.py`（图像：画布解析/cond加载/build_layout/VAE解码/to_png/PDD路径）。
 - `h3image_fp4_convert.py` / `h3video_fp4_convert.py`：BF16→NVFP4 k1 转换器（FFN fc1/fc2 + attn qkv/out 量化；AdaLN/norm/embed/输出头/patchify 保 BF16/FP32）。
-- `h3video_adaln_precompute.py`：视频 AdaLN t 键预计算（覆盖 video shift12 / audio shift3 / 0.999 参考钉）。
+- `h3image_adaln_precompute.py` / `h3video_adaln_precompute.py`：AdaLN t 键预计算（图像/视频；视频覆盖 video shift12 / audio shift3 / 0.999）。
 - `h3image_engine_fp4.py`：H3-Image FP4 引擎（NVFP4 算子 + 流式 + 自动驻留）。
-- `h3_engine_fp4.py`：H3 视频 FP4 引擎（monkey-patch BF16 视频引擎的 Reader/auto_slice/dit_forward；**启动按实际 steps 自动建/复用 AdaLN 缓存**）。
+- `h3_engine_fp4.py`：H3 视频 FP4 引擎（monkey-patch BF16 视频引擎；**启动按实际 steps 自动建/复用 AdaLN 缓存**；--tile/--ov 空间分块；--nodec 只测DiT）。
+
+## 模型权重（不随仓库，需自备）
+- H3-Image：`MiniMaxAI/MiniMax-H3-Image`（HF）或 ModelScope 镜像；放 `D:\ai\models\MiniMax-H3-Image`（transformer/vae/pdd_fused_heads/pdd_config/tokenizer/processor/scheduler；text_encoder 可链接 H3 的）。
+- H3 视频：`MiniMax-H3/Ref2VA`（transformer/video_vae/audio_vae/text_encoder/scheduler/audio_scheduler）。
+- 转换：先跑 `h3*_fp4_convert.py` 生成 FP4 分片到 `*-FP4/transformer`，再跑 `h3*_adaln_precompute.py [steps]` 建缓存。
+- 路径默认 `D:\ai\...`，他机请改各文件顶部 ROOT/FP4_DIR/COND 常量。
 
 ## NVFP4 算子（已验证逐位等价）
 `torch._scaled_mm_v2(a4, b4, scale_a=[swizzled_block_scale, 1/global], recipe=[BlockWise1x16, TensorWise], swizzle=[SWIZZLE_32_4_4, NO_SWIZZLE], ...)`

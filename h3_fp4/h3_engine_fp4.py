@@ -8,6 +8,7 @@ import os, sys, glob, json, time, argparse
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import torch
 from safetensors.torch import load_file
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, r"D:\ai")
 import h3_engine as he
 import h3image_engine_fp4 as F4
