@@ -50,5 +50,12 @@ k1 的 9.4% 是 E2M1（1 位尾数）固有地板，全组件一致；选块救�
 6. `run_ref2va` 未设 seed ⇒ 对照须 `torch.manual_seed`；旧 `h3_cond.pt` 缺 token_tags ⇒ 用带 tags 的 cond（如 h3image_cond_t2i.pt）。
 7. 参考图按自身分辨率编码（历史苹果 512 / 冒烟 farm 512）；ref 糊 ⇒ 视频糊。
 
+## 视频 MultiDiffusion 空间分块（已实现, h3_engine_fp4.py --tile/--ov）
+- 全局 RoPE 子网格（tile 行取全局 pos 坐标）+ overlap 线性融合；ref/text/audio 全 tile 共享。
+- 打包索引用**局部 arange**（全局 vid 会 index_copy 越界）；blend 权重/索引须同设备。
+- 实测 2K(2048²,22帧) tile=1024/ov=256 ⇒ 9 tiles，**单步~70s**（不分块>240s）；3步247s 出片连贯无接缝（糊=欠收敛非分块）。
+- 4K 用 1024-tile=16 tiles ⇒ ~128s/步（估）；512-tile 64 tiles 固定开销×64 反而慢⇒**tile 越大数量越少越划算**。
+- 每 tile 固定开销(50层 kernel+量化~3-4s)是小 L 主导；分块省注意力 O(L²) 但不省固定开销。
+
 ## 结论
 12GB Windows 5070：图像 FP4 512=15s/4K=178s（43×/显著），视频 512 20步=284s（6×）；视频 2K/4K 单步不实用（注意力 O(L²)+量化开销），需更大显存或 FP4 注意力/减帧。
