@@ -152,7 +152,7 @@ he.Reader = VideoFP4Reader
 he.auto_slice = _auto_slice
 he.dit_forward = fp4_dit_forward
 
-def run_ref2va_tiled(ref, out, steps=20, frames=124, H=2048, W=2048, tile=1024, ov=256, prompt="", seed=42):
+def run_ref2va_tiled(ref, out, steps=20, frames=124, H=2048, W=2048, tile=1024, ov=256, prompt="", seed=42, nodec=False):
     """MultiDiffusion spatial tiling for video DiT: global-RoPE subgrid + overlap blend."""
     import numpy as np, imageio.v3 as iio
     torch.manual_seed(seed)
@@ -219,6 +219,10 @@ def run_ref2va_tiled(ref, out, steps=20, frames=124, H=2048, W=2048, tile=1024, 
         xt = xt + (sig[i] - sig[i + 1]) * vo; xt[:, :Nr] = xv_ref
         xa = xa + (asig[i] - asig[i + 1]) * ao
         print("[tiled] step %d/%d %.0fs" % (i + 1, ne, time.time() - t0), flush=True)
+    if nodec:
+        torch.save(xt[:, Nr:].cpu(), out.replace(".mp4", "_latent.pt"))
+        print("[tiled] NODEC step-time-only total=%.0fs latent=%s" % (time.time() - t0, out.replace(".mp4", "_latent.pt")), flush=True)
+        return True
     _tgt = xt[:, Nr:]; B, N2, D = _tgt.shape
     Hh, Ww = H // 16, W // 16; T = N2 // ((Hh // 2) * (Ww // 2))
     y = _tgt.reshape(B, T, Hh // 2, Ww // 2, 24, 1, 2, 2).permute(0, 4, 1, 5, 2, 6, 3, 7).reshape(B, 24, T, Hh, Ww)
@@ -244,12 +248,13 @@ def main():
     ap.add_argument("--tile", type=int, default=0, help="MultiDiffusion spatial tile canvas px (0=off)")
     ap.add_argument("--ov", type=int, default=256, help="tile overlap px")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--nodec", action="store_true", help="skip VAE decode, time DiT only")
     a = ap.parse_args()
     global _cache
     _cache = build_cache(a.steps)
     print("[video-fp4] resident=%d steps=%d frames=%d size=%d tile=%d" % (RESIDENT, a.steps, a.frames, a.size, a.tile), flush=True)
     if a.tile > 0:
-        run_ref2va_tiled(a.ref, a.out, steps=a.steps, frames=a.frames, H=a.size, W=a.size, tile=a.tile, ov=a.ov, prompt=a.prompt, seed=a.seed)
+        run_ref2va_tiled(a.ref, a.out, steps=a.steps, frames=a.frames, H=a.size, W=a.size, tile=a.tile, ov=a.ov, prompt=a.prompt, seed=a.seed, nodec=a.nodec)
     else:
         he.run_ref2va(a.ref, a.out, steps=a.steps, frames=a.frames, H=a.size, W=a.size, prompt=a.prompt, verbose=True)
     print("[video-fp4] RESULT: OK -> %s" % a.out, flush=True)

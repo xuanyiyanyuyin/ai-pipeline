@@ -53,9 +53,10 @@ k1 的 9.4% 是 E2M1（1 位尾数）固有地板，全组件一致；选块救�
 ## 视频 MultiDiffusion 空间分块（已实现, h3_engine_fp4.py --tile/--ov）
 - 全局 RoPE 子网格（tile 行取全局 pos 坐标）+ overlap 线性融合；ref/text/audio 全 tile 共享。
 - 打包索引用**局部 arange**（全局 vid 会 index_copy 越界）；blend 权重/索引须同设备。
-- 实测 2K(2048²,22帧) tile=1024/ov=256 ⇒ 9 tiles，**单步~70s**（不分块>240s）；3步247s 出片连贯无接缝（糊=欠收敛非分块）。
-- 4K tile1024/ov256 ⇒ 36 tiles，**单步294s**；完整1步+解码=1239s（**4K VAE解码~945s 是大头**）。4K 20步≈114min⇒不实用；**2K 是这 box 实用上限**。
-- ov=0 ⇒ 4K 16 tiles≈128s/步（有接缝风险）；overlap 增大 tile 数（stride=tile-ov）。
+- 实测 2K(2048²,22帧) tile=1024：**ov0=4tiles 单步51s；ov256=9tiles 70s**（不分块>240s）；3步247s 出片连贯无接缝（糊=欠收敛非分块）。
+- 4K tile1024：**ov0=16tiles 单步173s；ov256=36tiles 294s**；完整1步+解码=1239s（**4K VAE解码~945s 是大头**）。4K 20步≈58-114min⇒重；**2K 是这 box 实用上限**。
+- **overlap**：ov>0 重叠区线性ramp融合⇒无缝但tiles多/慢；ov0 快但有接缝风险。
+- **时序**：每tile跑全部帧（时序不分块）⇒tile内运动连贯；ref/audio全tile共享。时序分块(切帧+时序blend)未做=下一层工程。
 - 每 tile 固定开销(50层 kernel+量化~3-4s)是小 L 主导；分块省注意力 O(L²) 但不省固定开销。
 
 ## k 各级别：精度 / 体积 / 速度预估（残差套娃，等价拆分不旋转）
