@@ -45,6 +45,8 @@
 2.13 pin_memory Windows额度~7.5-8GB超即OOM(非驱动坏)；32G RAM够放FP4不需pin；CPU算不了FP4(慢93-566×)、多核预取0收益,价值仅并行搬运。
 2.14 驻留sweet32-36,40+显存近满thrash反慢；4K激活实~6GB(fp32 GEMM out+int64 bucketize),估2.1-2.5错⇒BF16输出+分块量化+自动降驻留。
 2.15 视频2K/4K单步慢热 spot=激活quant bucketize(int64)每步~1800次+注意力O(L²)+大形状首调用autotune；cuDNN sm120有mxfp8/fp8注意力、无fp4-input。
+2.16 融合mod+quant两pass(mod_am算mod+逐16absmax写回amout,quant_am用同一am量化)修fp8 E4M3饱和垃圾图(g与am同源);micro-test g差0.05%(FMA舍入)packed97.6%。512净亏(2.8vs1.6s/步,launch/sync-bound)、2K持平(11.4vs11.5)、4K大赢(99.2→30.6s/步)⇒fp4_block按L>=8192 dispatch融合否则torch。根因=plain quant的M*K fp32 global-max临时张量(4K=479MB/次)在12GB显存thrash拖慢全部kernel(attn/rope/gemm全1.5-2×),融合在kernel内算max只写30MB amout避开;mod本身仅占1.9%。
+2.17 图像4K整渲实测203s(6步185s+VAE18s,~30s/步,3×于torch-mod~612s),VRAM峰恒3.64GB⇒4K全局act6.12GB已装进12GB,不需要分块(分块=n_tiles×launch-bound小前向, tile2048=9×~11s≈99s/步>全局30.6);分块只用于>4K或视频。512保持torch 1.6s/步/整渲17s。launcher用c_longlong修nb对齐。
 
 ──────────────────────────────────────────────
 §3 未完成/待续
