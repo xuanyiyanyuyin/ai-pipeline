@@ -246,10 +246,12 @@ def fp4_refiner(t, sm):
 
 def fp4_block(x, st, mods, idx, cos, sin):
     sh1, sc1, g1, sh2, sc2, g2 = mods
+    sh1 = sh1.index_select(0, idx).unsqueeze(0); sc1 = sc1.index_select(0, idx).unsqueeze(0)
     g1 = g1.index_select(0, idx).unsqueeze(0)
+    sh2 = sh2.index_select(0, idx).unsqueeze(0); sc2 = sc2.index_select(0, idx).unsqueeze(0)
     g2 = g2.index_select(0, idx).unsqueeze(0)
-    h = he.rms(x, st["norm1.weight"])
-    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"], mod=(sc1, sh1, idx)))
+    h = he.rms(x, st["norm1.weight"]); h = h * (1.0 + sc1) + sh1
+    qkv = he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"]))
     q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
     k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
     v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
@@ -260,8 +262,8 @@ def fp4_block(x, st, mods, idx, cos, sin):
     o = o.transpose(1, 2).reshape(x.shape[0], -1, HEADS * HEAD_DIM)
     o = fp4_lin(o, st["attn.out_proj.weight"])
     x = x + g1 * o
-    h = he.rms(x, st["norm2.weight"])
-    a, g = fp4_lin(h, st["mlp.fc1.weight"], mod=(sc2, sh2, idx)).chunk(2, dim=-1)
+    h = he.rms(x, st["norm2.weight"]); h = h * (1.0 + sc2) + sh2
+    a, g = fp4_lin(h, st["mlp.fc1.weight"]).chunk(2, dim=-1)
     h = he._swiglu(a, g)
     h = fp4_lin(h, st["mlp.fc2.weight"])
     return x + g2 * h
