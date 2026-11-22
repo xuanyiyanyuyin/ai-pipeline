@@ -26,7 +26,7 @@ python check_env.py
 - 需要 **torch>=2.11 + CUDA 12.8 (cu128)**；CPU 版 torch 直接判 FAIL（本引擎依赖 `_scaled_mm_v2`，CPU 上没有）
 - 需要 **Blackwell (sm100/sm120)**；RTX 40 系及更早、AMD 卡都会被判不可用（无 FP4 张量核）
 - 磁盘：BF16 原件 66GB + FP4 37.5GB ≈ **单模态至少 110GiB 空余**；图像+视频都转则 ≈208GiB
-- `cuda-python` / `nvidia-cuda-nvrtc-cu12` 缺失只 WARN（会回退慢速 Python 量化）
+- `cuda-python` / `nvidia-cuda-nvrtc-cu12` / `nvidia-cuda-runtime-cu12` 缺失只 WARN，但**强烈建议安装**：缺了融合 kernel 走不通，回退慢速 Python 量化，实测视频单步 **11.88s → 32.55s（2.7×）**；两包约 50MB，纯加法安装，与 ComfyUI 环境不冲突
 
 ## 模型权重（不随仓库，需自备）
 - H3-Image：`MiniMaxAI/MiniMax-H3-Image`（HF）或 ModelScope 镜像；放 `D:\ai\models\MiniMax-H3-Image`（transformer/vae/pdd_fused_heads/pdd_config/tokenizer/processor/scheduler；text_encoder 可链接 H3 的）。

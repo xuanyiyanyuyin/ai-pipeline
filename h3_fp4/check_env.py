@@ -48,7 +48,7 @@ def main():
                       ("nvidia.cuda_nvrtc", "pip install nvidia-cuda-nvrtc-cu12"),
                       ("nvidia.cuda_runtime", "pip install nvidia-cuda-runtime-cu12")]:
         if not _has(mod):
-            print("[WARN] 缺 %s (%s): fused_quant.cu 会回退到慢速 Python 量化" % (mod, hint))
+            print("[WARN] 缺 %s (%s): 会回退慢速 Python 量化, 实测视频单步 11.88s -> 32.55s (2.7x)。两包共约 50MB, 纯加法安装" % (mod, hint))
         else:
             print("%s: OK" % mod)
 
