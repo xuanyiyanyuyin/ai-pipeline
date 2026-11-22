@@ -10,6 +10,23 @@ BF16 原件保留不删。2026-11-20 实测。
 - `h3image_adaln_precompute.py` / `h3video_adaln_precompute.py`：AdaLN t 键预计算（图像/视频；视频覆盖 video shift12 / audio shift3 / 0.999）。
 - `h3image_engine_fp4.py`：H3-Image FP4 引擎（NVFP4 算子 + 流式 + 自动驻留）。
 - `h3_engine_fp4.py`：H3 视频 FP4 引擎（monkey-patch BF16 视频引擎；**启动按实际 steps 自动建/复用 AdaLN 缓存**；--tile/--ov 空间分块；--nodec 只测DiT）。
+- `h3image_encode.py`：**纯文生图条件编码**（Qwen3-VL 取第 50 层 hidden → `cond_t2i.pt`；t2i 必须先跑它）。之前漏随附，已补。
+- `h3_encode.py`：参考图/多参考图条件编码（i2i / edit / 视频 ref2va 用；`--ref` 可多张，顺序=官方 reference 顺序）。
+- `h3_video_job.py`：视频任务驱动（--steps/--turbo/--frames/--size/--cond）。
+- `h3_engine_server.py`：常驻 HTTP 服务（/v1/images/generations|edits、/v1/video/generations，异步 job）。
+- `fused_quant.cu` + NVRTC 运行时编译：融合 NVFP4 量化 kernel（免 MSVC/nvcc）。
+- `check_env.py`：**环境自检**（torch/CUDA/架构/_scaled_mm_v2/cuda-python/NVRTC/磁盘余量）。
+
+## 环境自检（先跑这个）
+
+```bash
+python check_env.py
+```
+
+- 需要 **torch>=2.11 + CUDA 12.8 (cu128)**；CPU 版 torch 直接判 FAIL（本引擎依赖 `_scaled_mm_v2`，CPU 上没有）
+- 需要 **Blackwell (sm100/sm120)**；RTX 40 系及更早、AMD 卡都会被判不可用（无 FP4 张量核）
+- 磁盘：BF16 原件 66GB + FP4 37.5GB ≈ **单模态至少 110GiB 空余**；图像+视频都转则 ≈208GiB
+- `cuda-python` / `nvidia-cuda-nvrtc-cu12` 缺失只 WARN（会回退慢速 Python 量化）
 
 ## 模型权重（不随仓库，需自备）
 - H3-Image：`MiniMaxAI/MiniMax-H3-Image`（HF）或 ModelScope 镜像；放 `D:\ai\models\MiniMax-H3-Image`（transformer/vae/pdd_fused_heads/pdd_config/tokenizer/processor/scheduler；text_encoder 可链接 H3 的）。
