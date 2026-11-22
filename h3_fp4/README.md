@@ -34,6 +34,14 @@ python check_env.py
 - 转换：先跑 `h3*_fp4_convert.py` 生成 FP4 分片到 `*-FP4/transformer`，再跑 `h3*_adaln_precompute.py [steps]` 建缓存。
 - 路径默认 `D:\ai\...`，他机请改各文件顶部 ROOT/FP4_DIR/COND 常量。
 
+## 驻留档位（--resident）：先按显存选档
+
+- **12GB（5070）**：`--resident 32`（auto 默认）；32–36 是甜点，40+ 分配器 thrash 反而慢
+- **≥24GB（4090/5090 等）**：直接 `--resident 50`（=50 层全驻留，每步不再流权重）
+  - 实测（群友 50 层）：512² **0.4s/步**（40 层时 4.6s/步，≈10×）、2048² 2.0s/步、稳态 10.7GB
+- **4K（L≈16.7k）**：auto 会按 `(空闲显存 - 激活估计 - 1.5GB)/0.208` 自动降档；显存富余的卡可手动 `--resident 50` 覆盖（OOM 会明确报错，不会损坏），失败退 45→40
+- `--resident` 是上限，auto 只在其下计算；改档无需改代码
+
 ## NVFP4 算子（已验证逐位等价）
 `torch._scaled_mm_v2(a4, b4, scale_a=[swizzled_block_scale, 1/global], recipe=[BlockWise1x16, TensorWise], swizzle=[SWIZZLE_32_4_4, NO_SWIZZLE], ...)`
 - block scale 经 `to_blocked()`（cuBLAS 128x4 / 32x4x4 swizzle）。
