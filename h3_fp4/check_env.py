@@ -37,10 +37,17 @@ def main():
             print("[FAIL] torch 缺 _scaled_mm_v2: 需要 torch>=2.11 cu128 (或更新)")
             fails.append("scaled_mm_v2")
 
+    def _has(mod):
+        # find_spec 在父包不存在时会抛 ModuleNotFoundError 而不是返回 None
+        try:
+            return importlib.util.find_spec(mod) is not None
+        except Exception:
+            return False
+
     for mod, hint in [("cuda.bindings.driver", "pip install cuda-python"),
                       ("nvidia.cuda_nvrtc", "pip install nvidia-cuda-nvrtc-cu12"),
                       ("nvidia.cuda_runtime", "pip install nvidia-cuda-runtime-cu12")]:
-        if importlib.util.find_spec(mod) is None:
+        if not _has(mod):
             print("[WARN] 缺 %s (%s): fused_quant.cu 会回退到慢速 Python 量化" % (mod, hint))
         else:
             print("%s: OK" % mod)
