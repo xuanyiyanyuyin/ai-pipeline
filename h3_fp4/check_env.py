@@ -23,6 +23,7 @@ def main():
 
     if not torch.cuda.is_available():
         print("[FAIL] CUDA 不可用: 需要 CUDA 12.8 版 torch (>=2.11)，CPU 版无法运行本引擎")
+        print("       注意: AMD ROCm / 魔搭 CPU Notebook 同样不可运行（FP4 是 NVIDIA Blackwell 专属）")
         fails.append("cuda")
     else:
         p = torch.cuda.get_device_properties(0)
@@ -37,7 +38,8 @@ def main():
             fails.append("scaled_mm_v2")
 
     for mod, hint in [("cuda.bindings.driver", "pip install cuda-python"),
-                      ("nvidia.cuda_nvrtc", "pip install nvidia-cuda-nvrtc-cu12")]:
+                      ("nvidia.cuda_nvrtc", "pip install nvidia-cuda-nvrtc-cu12"),
+                      ("nvidia.cuda_runtime", "pip install nvidia-cuda-runtime-cu12")]:
         if importlib.util.find_spec(mod) is None:
             print("[WARN] 缺 %s (%s): fused_quant.cu 会回退到慢速 Python 量化" % (mod, hint))
         else:
