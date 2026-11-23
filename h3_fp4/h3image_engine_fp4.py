@@ -12,12 +12,16 @@ from safetensors.torch import load_file
 from torch._C import _ScalingType as ST, _SwizzleType as SW
 sys.path.insert(0, r"D:\ai")
 import h3_engine as he
+if os.environ.get("H3_ATTN_FP4") == "1":
+    import h3_attn_fp4
+    h3_attn_fp4.install(he)
 import h3image_engine as base
 
 # 魔改1: fused rms_norm (1 kernel) replaces manual pow/mean/rsqrt (5 kernels), FP4 path only
 def _fused_rms(x, w, eps=1e-5):
     return F.rms_norm(x.float(), (x.shape[-1],), w.float(), eps).to(w.dtype)
-he.rms = _fused_rms
+if os.environ.get('H3_FUSED_RMS') == '1':
+    he.rms = _fused_rms   # [11-24] 默认恢复 11-20 manual rms 舍入口径; fused 版需显式开启
 
 FP4_DIR = r"D:\ai\models\MiniMax-H3-Image-FP4\transformer"
 CACHE_FILE = os.path.join(FP4_DIR, "adaln_cache.safetensors")
@@ -50,14 +54,13 @@ def fp4_gemm(a4, b4, sa_sw, ga, sb_sw, gb, out_dtype=torch.bfloat16):
         bias=None, out_dtype=out_dtype)
 
 def quant_act(x2):
-    # bf16 throughout: max/amax/bucketize need no [M,K] fp32 copy (that temporary thrashed VRAM at 4K)
-    M, K = x2.shape; x2 = x2.to(DEV)
-    g = (448 * 6) / x2.abs().amax().float().clamp(min=1e-12)
-    b = x2.reshape(M, K // 16, 16)
-    am = b.abs().amax(-1, keepdim=True).float().clamp(min=1e-12)
+    # [11-24 恢复 11-20 fp32 口径] bf16 全程版有 0.16% 码翻转, 混沌放大后纹理变软; 小 M 内存可控
+    M, K = x2.shape; xf = x2.to(DEV).float()
+    g = (448 * 6) / xf.abs().max().clamp(min=1e-12)
+    b = xf.reshape(M, K // 16, 16); am = b.abs().amax(-1, keepdim=True).clamp(min=1e-12)
     s = ((am / 6) * g).to(fp8); se = s.float().clamp(min=1e-12)
-    n = (b * (g / se).to(x2.dtype)).clamp(-6, 6)
-    idx = torch.bucketize(n.abs(), MID.to(n.dtype)).to(torch.uint8)
+    n = (b * g / se).clamp(-6, 6)
+    idx = torch.bucketize(n.abs(), MID).to(torch.uint8)
     code = ((n < 0).to(torch.uint8) << 3) | idx; code = code.reshape(M, K)
     packed = (code[:, 0::2] | (code[:, 1::2] << 4)).contiguous()
     return packed, to_blocked(s.squeeze(-1).reshape(M, K // 16)), g.reshape(1)
@@ -148,21 +151,56 @@ def make_layer_fn(reader, resident):
         return st
     return layer
 
+def _quant_plain_k2(x2):
+    """[11-24 主人令] 激活套层 k1+k2：A->q1; R=A-deq(q1); R->q2。fp32 数学（与 11-20 口径同）。"""
+    M, K = x2.shape
+    xf = x2.to(DEV).float()
+    g = (448 * 6) / xf.abs().max().clamp(min=1e-12)
+    b = xf.reshape(M, K // 16, 16)
+    am = b.abs().amax(-1, keepdim=True).clamp(min=1e-12)
+    s = ((am / 6) * g).to(fp8)
+    se = s.float().clamp(min=1e-12)
+    n = (b * g / se).clamp(-6, 6)
+    idx = torch.bucketize(n.abs(), MID).to(torch.uint8)
+    code = ((n < 0).to(torch.uint8) << 3) | idx
+    code = code.reshape(M, K)
+    p1 = (code[:, 0::2] | (code[:, 1::2] << 4)).contiguous()
+    s1 = s.squeeze(-1)
+    lv = LV[(code & 7).long()] * torch.where((code & 8) > 0, -1.0, 1.0)
+    d1 = (lv * se.repeat_interleave(16, 1) / g).reshape(M, K)
+    r = xf - d1
+    g2 = (448 * 6) / r.abs().max().clamp(min=1e-12)
+    b2 = r.reshape(M, K // 16, 16)
+    am2 = b2.abs().amax(-1, keepdim=True).clamp(min=1e-12)
+    s2 = ((am2 / 6) * g2).to(fp8)
+    se2 = s2.float().clamp(min=1e-12)
+    n2 = (b2 * g2 / se2).clamp(-6, 6)
+    idx2 = torch.bucketize(n2.abs(), MID).to(torch.uint8)
+    code2 = ((n2 < 0).to(torch.uint8) << 3) | idx2
+    code2 = code2.reshape(M, K)
+    p2 = (code2[:, 0::2] | (code2[:, 1::2] << 4)).contiguous()
+    return p1, to_blocked(s1), g, p2, to_blocked(s2.squeeze(-1)), g2
+
+
 def fp4_lin(x, w, mod=None):
     B, L, K = x.shape
     x2 = x.reshape(B * L, K)
     M = x2.shape[0]
     CH = 4096   # bound quant temporaries (int64 bucketize / fp32 blocks) per chunk at 4K
     if M <= CH:
-        xp, xs_sw, xg = _quant(x2, mod)
-        out = fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g'])
+        if os.environ.get('H3_ACT_K2') == '1':
+            p1, s1, g1, p2, s2, g2 = _quant_plain_k2(x2)
+            out = fp4_gemm(p1.view(fp4), w['b4'], s1, g1, w['sw'], w['g'])
+            out = out + fp4_gemm(p2.view(fp4), w['b4'], s2, g2, w['sw'], w['g'])
+        else:
+            xp, xs_sw, xg = quant_act(x2)
+            out = fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g'])
     else:
-        outs = []
+        out = torch.empty(M, w['N'], device=x2.device, dtype=torch.bfloat16)
         for s in range(0, M, CH):
             mc = (mod[0], mod[1], mod[2][s:s + CH]) if mod else None
             xp, xs_sw, xg = _quant(x2[s:s + CH], mc)
-            outs.append(fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g']))
-        out = torch.cat(outs, 0)
+            out[s:s + min(CH, M - s)] = fp4_gemm(xp.view(fp4), w['b4'], xs_sw, xg, w['sw'], w['g'])
     return out.reshape(B, L, w['N']).to(DTYPE)
 
 # ---- self-developed fused NVFP4 activation-quant kernels (NVRTC, official, no MSVC) ----
@@ -256,22 +294,59 @@ def fp4_block(x, st, mods, idx, cos, sin, lora=None):
     sh2 = sh2.index_select(0, idx).unsqueeze(0); sc2 = sc2.index_select(0, idx).unsqueeze(0)
     g2 = g2.index_select(0, idx).unsqueeze(0)
     h = he.rms(x, st["norm1.weight"]); h = h * (1.0 + sc1) + sh1
-    qkv = he._add_lora(he._qkv_fix(fp4_lin(h, st["attn.qkv_proj.weight"])), h, lora, "attn.qkv_proj")
-    q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
-    q = he.rms(q, st["attn.q_norm.weight"]); k = he.rms(k, st["attn.k_norm.weight"])
-    q = he.rope_apply(q, cos, sin); k = he.rope_apply(k, cos, sin)
-    q, k, v = (t.transpose(1, 2) for t in (q, k, v))
-    o = he._sdpa(q, k, v)
-    o = o.transpose(1, 2).reshape(x.shape[0], -1, HEADS * HEAD_DIM)
-    o = he._add_lora(fp4_lin(o, st["attn.out_proj.weight"]), o, lora, "attn.out_proj")
-    x = x + g1 * o
+    B, Lt, HID = x.shape
+    CHK = int(os.environ.get("H3_CHUNK", "4096"))
+    chunked = Lt > CHK
+    _lvl = os.environ.get("H3_ATTN_LEVEL", "1")
+    fp4attn = os.environ.get("H3_ATTN_FP4") == "1" and _lvl in ("1", "2")
+    if chunked and fp4attn:
+        import h3_attn_fp4 as _A
+        o = _A.attn_chunked(h, st["attn.qkv_proj.weight"], st["attn.q_norm.weight"],
+                            st["attn.k_norm.weight"], cos, sin, lora, CHK, level=int(_lvl))
+    else:
+        qkv = he._add_lora(fp4_lin(h, st["attn.qkv_proj.weight"]), h, lora, "attn.qkv_proj")
+        o = None
+        if fp4attn:
+            import h3_attn_fp4 as _A
+            o = _A.attn_from_qkv(qkv, st["attn.q_norm.weight"], st["attn.k_norm.weight"], cos, sin)
+        if o is None:
+            qkv = he._qkv_fix(qkv)
+            q = qkv[:, :, :7168].view(x.shape[0], -1, HEADS, HEAD_DIM)
+            k = qkv[:, :, 7168:14336].view(x.shape[0], -1, HEADS, HEAD_DIM)
+            v = qkv[:, :, 14336:].view(x.shape[0], -1, HEADS, HEAD_DIM)
+            q = he.rms(q, st["attn.q_norm.weight"]); k = he.rms(k, st["attn.k_norm.weight"])
+            q = he.rope_apply(q, cos, sin); k = he.rope_apply(k, cos, sin)
+            q, k, v = (t.transpose(1, 2) for t in (q, k, v))
+            o = he._sdpa(q, k, v)
+    o = o.transpose(1, 2)          # [B, Lt, H, D]
+    if chunked:
+        for s in range(0, Lt, CHK):
+            c = min(CHK, Lt - s)
+            oc = o[:, s:s + c].reshape(B, c, HEADS * HEAD_DIM)
+            oc = he._add_lora(fp4_lin(oc, st["attn.out_proj.weight"]), oc, lora, "attn.out_proj")
+            x[:, s:s + c] = x[:, s:s + c] + g1[:, s:s + c] * oc
+            del oc
+    else:
+        oc = o.reshape(B, Lt, HEADS * HEAD_DIM)
+        oc = he._add_lora(fp4_lin(oc, st["attn.out_proj.weight"]), oc, lora, "attn.out_proj")
+        x = x + g1 * oc
     h = he.rms(x, st["norm2.weight"]); h = h * (1.0 + sc2) + sh2
-    a, g = he._add_lora(fp4_lin(h, st["mlp.fc1.weight"]), h, lora, "mlp.fc1").chunk(2, dim=-1)
-    hh = he._swiglu(a, g)
-    h = he._add_lora(fp4_lin(hh, st["mlp.fc2.weight"]), hh, lora, "mlp.fc2")
-    return x + g2 * h
+    if chunked:
+        for s in range(0, Lt, CHK):
+            c = min(CHK, Lt - s)
+            a, gg = he._add_lora(fp4_lin(h[:, s:s + c], st["mlp.fc1.weight"]),
+                                 h[:, s:s + c], lora, "mlp.fc1").chunk(2, dim=-1)
+            hh = he._swiglu(a, gg)
+            hc = he._add_lora(fp4_lin(hh, st["mlp.fc2.weight"]), hh, lora, "mlp.fc2")
+            x[:, s:s + c] = x[:, s:s + c] + g2[:, s:s + c] * hc
+            del a, gg, hh, hc
+    else:
+        a, gg = he._add_lora(fp4_lin(h, st["mlp.fc1.weight"]), h, lora, "mlp.fc1").chunk(2, dim=-1)
+        hh = he._swiglu(a, gg)
+        hc = he._add_lora(fp4_lin(hh, st["mlp.fc2.weight"]), hh, lora, "mlp.fc2")
+        x = x + g2 * hc
+    return x
+
 
 def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_idx,
                     sm, layer_fn, pdd_w, pdd_b, cache):
@@ -290,9 +365,22 @@ def fp4_dit_forward(reader, ximg, cond, step_i, ti, tags, pos, image_idx, text_i
         st = layer_fn(i)
         mods = cache["s%d_l%d" % (step_i, i)].to(DEV).unbind(0)   # 6 x [3,HID]
         h = fp4_block(h, st, mods, idx, cos, sin, he.lora_side(i))
+        if os.environ.get("H3_EMPTY_EVERY", "1") == "1":
+            torch.cuda.empty_cache()
         if i % 10 == 0 or i == reader.n - 1:
-            log("[d] layer %d/%d %.1fs VRAM %.2fGB" % (i, reader.n, time.perf_counter() - t0,
-                torch.cuda.memory_allocated() / 1024 ** 3))
+            _card = ""
+            try:
+                import pynvml as _p
+                _p.nvmlInit()
+                _mi = _p.nvmlDeviceGetMemoryInfo(_p.nvmlDeviceGetHandleByIndex(0))
+                _card = " card %.2f/%.2fGB" % (_mi.used / 2**30, _mi.total / 2**30)
+            except Exception:
+                pass
+            log("[d] layer %d/%d %.1fs alloc %.2fGB reserved %.2fGB peak %.2fGB%s" % (
+                i, reader.n, time.perf_counter() - t0,
+                torch.cuda.memory_allocated() / 1024 ** 3,
+                torch.cuda.memory_reserved() / 1024 ** 3,
+                torch.cuda.max_memory_allocated() / 1024 ** 3, _card))
     hh = he.rms(h, sm["final_layer.norm.weight"])
     ao = cache["s%d_final" % step_i].to(DEV)
     sh, sc = ao[0], ao[1]
